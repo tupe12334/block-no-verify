@@ -13,7 +13,15 @@
     "commitlint",
     "lcov",
     "codecov",
-    "verifytest"
+    "verifytest",
+    "centy",
+    "uuidgen",
+    "appwrite",
+    "codemzy",
+    "danallan",
+    "worktree",
+    "cmdk",
+    "paco"
   ],
   "languageSettings": [
     {
