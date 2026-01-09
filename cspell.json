@@ -1,0 +1,31 @@
+{
+  "version": "0.2",
+  "language": "en,he",
+  "dictionaries": ["he"],
+  "words": [
+    "tupe",
+    "pnpm",
+    "vitest",
+    "husky",
+    "eslint",
+    "tsconfig",
+    "esbenp",
+    "commitlint",
+    "lcov",
+    "codecov",
+    "verifytest"
+  ],
+  "languageSettings": [
+    {
+      "languageId": "*",
+      "locale": "en,he"
+    }
+  ],
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "pnpm-lock.yaml",
+    "*.min.js"
+  ]
+}
