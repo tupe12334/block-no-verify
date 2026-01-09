@@ -1,6 +1,6 @@
 {
   "name": "block-no-verify",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "CLI tool to block --no-verify flag in git commands. Prevents AI agents from bypassing git hooks.",
   "type": "module",
   "main": "./dist/index.js",
