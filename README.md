@@ -11,8 +11,6 @@ This package provides a CLI that can be used as a Claude Code hook to block any 
 ## Installation
 
 ```bash
-npm install -g block-no-verify
-# or
 pnpm add -g block-no-verify
 ```
 
@@ -32,26 +30,6 @@ You can use the package directly without installing it globally:
           {
             "type": "command",
             "command": "pnpm dlx block-no-verify"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Or with npx:
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx block-no-verify"
           }
         ]
       }
