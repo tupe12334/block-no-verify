@@ -18,6 +18,7 @@
       "Bash(centy add asset --help:*)",
       "Bash(open:*)",
       "Bash(pnpm run build:*)",
+      "Bash(pnpm test:*)",
       "Bash(tree:*)",
       "Bash(centy close:*)",
       "Bash(centy:*)",
