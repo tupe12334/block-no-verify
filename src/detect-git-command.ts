@@ -18,7 +18,18 @@ export function detectGitCommand(input: string): GitCommand | null {
     const beforeGit = gitIndex > 0 ? input[gitIndex - 1] : ' '
     const afterGit = input[gitIndex + 3] || ' '
 
-    if (!/\s|^$/.test(beforeGit) && beforeGit !== ';' && beforeGit !== '&') {
+    // Allow shell syntax characters before 'git': whitespace, ;, &, |, $(, `, (, <
+    const validBeforeGit =
+      /\s/.test(beforeGit) ||
+      beforeGit === ';' ||
+      beforeGit === '&' ||
+      beforeGit === '|' ||
+      beforeGit === '$' ||
+      beforeGit === '`' ||
+      beforeGit === '(' ||
+      beforeGit === '<' ||
+      beforeGit === '{'
+    if (!validBeforeGit) {
       continue
     }
     if (!/\s/.test(afterGit)) continue

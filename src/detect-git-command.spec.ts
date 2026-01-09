@@ -83,4 +83,54 @@ describe('detectGitCommand', () => {
       expect(detectGitCommand('git uncommitted')).toBeNull()
     })
   })
+
+  describe('shell syntax edge cases', () => {
+    it('should detect git commit in subshell $()', () => {
+      expect(detectGitCommand('$(git commit -m "test")')).toBe('commit')
+    })
+
+    it('should detect git commit in backticks', () => {
+      expect(detectGitCommand('`git commit -m "test"`')).toBe('commit')
+    })
+
+    it('should detect git commit after pipe', () => {
+      expect(detectGitCommand('echo "y" | git commit -m "test"')).toBe('commit')
+    })
+
+    it('should detect git commit with here-doc', () => {
+      expect(detectGitCommand('git commit -m <<EOF')).toBe('commit')
+    })
+
+    it('should detect git commit as background job', () => {
+      expect(detectGitCommand('git commit -m "test" &')).toBe('commit')
+    })
+
+    it('should detect git push as background job', () => {
+      expect(detectGitCommand('git push origin main &')).toBe('push')
+    })
+
+    it('should detect git commit after semicolon', () => {
+      expect(detectGitCommand('cd /path; git commit -m "test"')).toBe('commit')
+    })
+
+    it('should detect git commit after || operator', () => {
+      expect(detectGitCommand('false || git commit -m "test"')).toBe('commit')
+    })
+
+    it('should detect git commit in nested subshell', () => {
+      expect(detectGitCommand('echo $(git commit -m "test")')).toBe('commit')
+    })
+
+    it('should detect git commit with process substitution', () => {
+      expect(detectGitCommand('diff <(git commit -m "test")')).toBe('commit')
+    })
+
+    it('should detect git commit in command grouping with braces', () => {
+      expect(detectGitCommand('{ git commit -m "test"; }')).toBe('commit')
+    })
+
+    it('should detect git commit in subshell with parentheses', () => {
+      expect(detectGitCommand('(git commit -m "test")')).toBe('commit')
+    })
+  })
 })
