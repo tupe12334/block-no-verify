@@ -18,7 +18,51 @@ pnpm add -g block-no-verify
 
 ## Usage with Claude Code
 
-Add this to your `.claude/settings.json`:
+### Without Installation (Recommended)
+
+You can use the package directly without installing it globally:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm dlx block-no-verify"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Or with npx:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx block-no-verify"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### With Global Installation
+
+If you installed the package globally, add this to your `.claude/settings.json`:
 
 ```json
 {
