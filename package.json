@@ -1,0 +1,81 @@
+{
+  "name": "block-no-verify",
+  "version": "0.0.0",
+  "description": "CLI tool to block --no-verify flag in git commands. Prevents AI agents from bypassing git hooks.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "block-no-verify": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "spell": "cspell lint '**/*.{ts,js,md,json}' --gitignore",
+    "spell:check": "cspell lint '**/*.{ts,js,md,json}' --gitignore",
+    "knip": "knip",
+    "prepare": "husky",
+    "release": "release-it"
+  },
+  "keywords": [
+    "git",
+    "no-verify",
+    "hooks",
+    "cli",
+    "security",
+    "ai-safety",
+    "claude-code",
+    "agent-governance"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.26.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tupe12334/block-no-verify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tupe12334/block-no-verify/issues"
+  },
+  "homepage": "https://github.com/tupe12334/block-no-verify#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "@cspell/dict-he": "^4.0.5",
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^4.0.16",
+    "cspell": "^9.4.0",
+    "eslint": "^9.39.2",
+    "eslint-config-agent": "^1.9.0",
+    "eslint-config-publishable-package-json": "^1.0.0",
+    "husky": "^9.1.7",
+    "knip": "^5.80.2",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.4",
+    "release-it": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  }
+}
