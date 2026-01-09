@@ -2,74 +2,76 @@
 /**
  * block-no-verify CLI
  *
- * Usage in Claude Code hooks:
- *
- * In your .claude/settings.json:
- * ```json
- * {
- *   "hooks": {
- *     "PreToolUse": [
- *       {
- *         "matcher": "Bash",
- *         "hooks": [
- *           {
- *             "type": "command",
- *             "command": "block-no-verify"
- *           }
- *         ]
- *       }
- *     ]
- *   }
- * }
- * ```
- *
- * The CLI reads the command from stdin and exits with:
- * - 0 if the command is allowed
- * - 2 if the command is blocked (contains --no-verify)
- * - 1 if an error occurred
+ * A platform-agnostic tool to block --no-verify flags in git commands.
+ * Works with Claude Code, Gemini CLI, Cursor, and other AI coding tools.
  */
 
+import { parseArgs } from './cli-args.js'
+import { HELP_TEXT } from './cli-help.js'
+import { parseInput } from './parse-input.js'
 import { checkCommand, EXIT_CODES } from './index.js'
+
+const VERSION = '1.1.0'
 
 async function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = ''
 
-    // Set encoding to utf8
     process.stdin.setEncoding('utf8')
 
-    // Handle data chunks
     process.stdin.on('data', chunk => {
       data += chunk
     })
 
-    // Resolve when stdin ends
     process.stdin.on('end', () => {
       resolve(data)
     })
 
-    // Handle errors
     process.stdin.on('error', err => {
       reject(err)
     })
 
-    // If stdin is empty/not piped, resolve with empty string after a short timeout
     if (process.stdin.isTTY) {
       resolve('')
     }
   })
 }
 
+function handleError(message: string): never {
+  console.error(message)
+  console.error('Valid formats: auto, plain, claude-code, json')
+  console.error('Use --help for usage information')
+  process.exit(EXIT_CODES.ERROR)
+}
+
 async function main(): Promise<void> {
   try {
-    const input = await readStdin()
+    const args = parseArgs(process.argv.slice(2), handleError)
 
-    if (!input.trim()) {
-      // No input provided, allow by default
+    if (args.showHelp) {
+      console.log(HELP_TEXT)
       process.exit(EXIT_CODES.ALLOWED)
     }
 
-    const result = checkCommand(input)
+    if (args.showVersion) {
+      console.log(VERSION)
+      process.exit(EXIT_CODES.ALLOWED)
+    }
+
+    // Get input from argument or stdin
+    let rawInput: string
+    if (args.command !== null) {
+      rawInput = args.command
+    } else {
+      rawInput = await readStdin()
+    }
+
+    if (!rawInput.trim()) {
+      process.exit(EXIT_CODES.ALLOWED)
+    }
+
+    const { command } = parseInput(rawInput, args.format)
+    const result = checkCommand(command)
 
     if (result.blocked) {
       console.error(result.reason)
@@ -78,10 +80,8 @@ async function main(): Promise<void> {
 
     process.exit(EXIT_CODES.ALLOWED)
   } catch (error) {
-    console.error(
-      'Error:',
-      error instanceof Error ? error.message : String(error)
-    )
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Error:', message)
     process.exit(EXIT_CODES.ERROR)
   }
 }

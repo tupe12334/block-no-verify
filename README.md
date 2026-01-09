@@ -1,12 +1,12 @@
 # block-no-verify
 
-A security tool that blocks the `--no-verify` flag in git commands. Designed to prevent AI agents from bypassing git hooks.
+A platform-agnostic security tool that blocks the `--no-verify` flag in git commands. Designed to prevent AI agents from bypassing git hooks.
 
 ## Why?
 
-When using AI coding assistants like Claude Code, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. The `--no-verify` flag allows bypassing these hooks, which could allow AI agents to skip important validations.
+When using AI coding assistants like Claude Code, Gemini CLI, Cursor, or others, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. The `--no-verify` flag allows bypassing these hooks, which could allow AI agents to skip important validations.
 
-This package provides a CLI that can be used as a Claude Code hook to block any git commands that include `--no-verify`.
+This package provides a CLI that can block any git commands that include `--no-verify`, working with any AI tool that supports command hooks.
 
 ## Installation
 
@@ -14,11 +14,29 @@ This package provides a CLI that can be used as a Claude Code hook to block any 
 pnpm add -g block-no-verify
 ```
 
-## Usage with Claude Code
+Or use without installation via `pnpm dlx block-no-verify` or `npx block-no-verify`.
 
-### Without Installation (Recommended)
+## Quick Start
 
-You can use the package directly without installing it globally:
+```bash
+# Check a command directly
+block-no-verify "git commit --no-verify -m 'test'"
+# Exit code: 2 (blocked)
+
+# Check a safe command
+block-no-verify "git commit -m 'test'"
+# Exit code: 0 (allowed)
+
+# Pipe from stdin
+echo "git push --no-verify" | block-no-verify
+# Exit code: 2 (blocked)
+```
+
+## Platform Integration
+
+### Claude Code
+
+Add to your `.claude/settings.json`:
 
 ```json
 {
@@ -38,20 +56,25 @@ You can use the package directly without installing it globally:
 }
 ```
 
-### With Global Installation
+### Gemini CLI
 
-If you installed the package globally, add this to your `.claude/settings.json`:
+Gemini CLI supports hooks via `.gemini/settings.json`. The hook system mirrors Claude Code's JSON-over-stdin contract and exit code semantics.
+
+Add to your `.gemini/settings.json`:
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [
+    "BeforeTool": [
       {
-        "matcher": "Bash",
+        "matcher": "run_shell_command",
         "hooks": [
           {
+            "name": "block-no-verify",
             "type": "command",
-            "command": "block-no-verify"
+            "command": "pnpm dlx block-no-verify",
+            "description": "Block --no-verify flags in git commands",
+            "timeout": 5000
           }
         ]
       }
@@ -60,7 +83,62 @@ If you installed the package globally, add this to your `.claude/settings.json`:
 }
 ```
 
-This will block any Bash commands that contain `--no-verify` with supported git commands.
+> **Note:** Hooks are disabled by default in Gemini CLI. You may need to enable them in your settings. See [Gemini CLI Hooks Documentation](https://geminicli.com/docs/hooks/) for details.
+
+### Cursor
+
+Cursor 1.7+ supports hooks via `.cursor/hooks.json`. The `beforeShellExecution` hook runs before any shell command.
+
+Create `.cursor/hooks.json` in your project root:
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "pnpm dlx block-no-verify --format plain"
+      }
+    ]
+  }
+}
+```
+
+> **Note:** Cursor hooks are in beta. See [Cursor Hooks Documentation](https://cursor.com/docs/agent/hooks) for the latest information.
+
+### Generic Integration
+
+block-no-verify accepts input in multiple formats:
+
+```bash
+# Plain text (default)
+block-no-verify "git commit --no-verify"
+
+# JSON with command field
+echo '{"command":"git commit --no-verify"}' | block-no-verify
+
+# JSON with other fields (cmd, input, shell, script)
+echo '{"cmd":"git push --no-verify"}' | block-no-verify
+
+# Claude Code format (auto-detected)
+echo '{"tool_input":{"command":"git commit --no-verify"}}' | block-no-verify
+```
+
+## CLI Options
+
+```
+block-no-verify [options] [command]
+
+Options:
+  --format <type>   Input format: auto, plain, claude-code, json (default: auto)
+  --help, -h        Show help message
+  --version, -v     Show version
+
+Input Methods:
+  1. Command argument:  block-no-verify "git commit --no-verify"
+  2. Stdin (plain):     echo "git commit --no-verify" | block-no-verify
+  3. Stdin (JSON):      echo '{"command":"..."}' | block-no-verify
+```
 
 ## Supported Git Commands
 
@@ -91,28 +169,18 @@ The following git commands are monitored for `--no-verify`:
 - `2` - Command is blocked (contains `--no-verify`)
 - `1` - An error occurred
 
-## Programmatic Usage
+## Supported JSON Fields
 
-```typescript
-import {
-  checkCommand,
-  detectGitCommand,
-  hasNoVerifyFlag,
-} from 'block-no-verify'
+When using JSON input (auto-detected or with `--format json`), the following fields are recognized:
 
-// Check if a command should be blocked
-const result = checkCommand('git commit --no-verify -m "test"')
-console.log(result.blocked) // true
-console.log(result.reason) // "BLOCKED: --no-verify flag is not allowed..."
-
-// Detect git command type
-const cmd = detectGitCommand('git push origin main')
-console.log(cmd) // "push"
-
-// Check for no-verify flag
-const hasFlag = hasNoVerifyFlag('git commit -n -m "test"', 'commit')
-console.log(hasFlag) // true
-```
+| Field                | Description               |
+| -------------------- | ------------------------- |
+| `tool_input.command` | Claude Code format        |
+| `command`            | Generic command field     |
+| `cmd`                | Alternative command field |
+| `input`              | Input field               |
+| `shell`              | Shell command field       |
+| `script`             | Script field              |
 
 ## Contributing
 
@@ -121,3 +189,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 ## License
 
 MIT
+
+## References
+
+- [Claude Code Hooks](https://docs.anthropic.com/en/docs/claude-code)
+- [Gemini CLI Hooks](https://geminicli.com/docs/hooks/)
+- [Cursor Hooks](https://cursor.com/docs/agent/hooks)
