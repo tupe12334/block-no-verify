@@ -114,27 +114,9 @@ const hasFlag = hasNoVerifyFlag('git commit -n -m "test"', 'commit')
 console.log(hasFlag) // true
 ```
 
-## Development
+## Contributing
 
-```bash
-# Install dependencies
-pnpm install
-
-# Build
-pnpm build
-
-# Run tests
-pnpm test
-
-# Run tests with coverage
-pnpm test:coverage
-
-# Lint
-pnpm lint
-
-# Format
-pnpm format
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
