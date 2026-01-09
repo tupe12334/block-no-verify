@@ -87,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "block-no-verify"
+            "command": "pnpm dlx block-no-verify"
           }
         ]
       }
