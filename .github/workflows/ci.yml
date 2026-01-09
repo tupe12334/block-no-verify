@@ -42,6 +42,9 @@ jobs:
       - name: Check for unused code
         run: pnpm knip
 
+      - name: Build
+        run: pnpm build
+
       - name: Run tests with coverage
         run: pnpm test:coverage --run
 
@@ -55,9 +58,6 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Build
-        run: pnpm build
 
   publish:
     needs: test
