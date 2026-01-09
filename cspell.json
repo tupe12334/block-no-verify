@@ -22,7 +22,10 @@
     "worktree",
     "cmdk",
     "paco",
-    "subshell"
+    "subshell",
+    "doas",
+    "nohup",
+    "strace"
   ],
   "languageSettings": [
     {
