@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "enabled": ["BeforeTool"],
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "name": "block-no-verify",
+            "type": "command",
+            "command": "pnpm dlx block-no-verify",
+            "description": "Block --no-verify flags in git commands",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
