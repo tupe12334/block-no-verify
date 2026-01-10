@@ -97,7 +97,7 @@ Create `.cursor/hooks.json` in your project root:
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": "pnpm dlx block-no-verify --format plain"
+        "command": "pnpm dlx block-no-verify"
       }
     ]
   }

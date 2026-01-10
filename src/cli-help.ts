@@ -49,6 +49,15 @@ EXAMPLES:
     }
   }
 
+  # Cursor hook (.cursor/hooks.json)
+  {
+    "hooks": {
+      "beforeShellExecution": [{
+        "command": "pnpm dlx block-no-verify"
+      }]
+    }
+  }
+
   # Generic AI tool integration
   block-no-verify --format plain "git push --no-verify"
 

@@ -1,6 +1,6 @@
 {
   "name": "block-no-verify",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "CLI tool to block --no-verify flag in git commands. Prevents AI agents from bypassing git hooks.",
   "type": "module",
   "main": "./dist/index.js",
@@ -68,7 +68,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "cspell": "^9.4.0",
     "eslint": "^9.39.2",
-    "eslint-config-agent": "^1.9.0",
+    "eslint-config-agent": "^1.9.3",
     "eslint-config-publishable-package-json": "^1.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "husky": "^9.1.7",
