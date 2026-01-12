@@ -46,3 +46,4 @@ eslint-report.json
 # Temporary files
 *.tmp
 .cache/
+.local/
