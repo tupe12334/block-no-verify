@@ -39,6 +39,7 @@
       "Bash(echo:*)",
       "Bash(find:*)",
       "Bash(mkdir:*)",
+      "Bash(wc:*)",
       "Bash(pnpm knip:*)",
       "Bash(cat:*)",
       "Bash(gh secret set:*)",
