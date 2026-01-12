@@ -8,6 +8,12 @@ When using AI coding assistants like Claude Code, Gemini CLI, Cursor, or others,
 
 This package provides a CLI that can block any git commands that include `--no-verify`, working with any AI tool that supports command hooks.
 
+## Used By
+
+<a href="https://github.com/langgenius/dify">
+  <img src="https://github.com/langgenius.png" width="50" height="50" alt="Dify" title="Dify - Open-source LLM app development platform">
+</a>
+
 ## Installation
 
 ```bash
@@ -126,7 +132,7 @@ echo '{"tool_input":{"command":"git commit --no-verify"}}' | block-no-verify
 
 ## CLI Options
 
-```
+```text
 block-no-verify [options] [command]
 
 Options:

@@ -25,7 +25,8 @@
     "subshell",
     "doas",
     "nohup",
-    "strace"
+    "strace",
+    "Dify"
   ],
   "languageSettings": [
     {
