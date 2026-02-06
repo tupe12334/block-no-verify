@@ -78,7 +78,10 @@
       "Bash(gh issue list:*)",
       "Bash(ls:*)",
       "Bash(npx centy --help:*)",
-      "Bash(pnpm centy --help:*)"
+      "Bash(pnpm centy --help:*)",
+      "Bash(node debug-ast.mjs:*)",
+      "Bash(git config:*)",
+      "Bash(pnpm build:*)"
     ]
   },
   "hooks": {
