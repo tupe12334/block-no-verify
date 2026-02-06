@@ -85,6 +85,36 @@ describe('checkCommand', () => {
     })
   })
 
+  describe('blocking hooks path override', () => {
+    it('should block git -c core.hooksPath=/dev/null push', () => {
+      const result = checkCommand('git -c core.hooksPath=/dev/null push')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('push')
+      expect(result.reason).toContain('BLOCKED')
+      expect(result.reason).toContain('core.hooksPath')
+    })
+
+    it('should block git -c core.hooksPath=/dev/null commit', () => {
+      const result = checkCommand(
+        'git -c core.hooksPath=/dev/null commit -m "test"'
+      )
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should block git -c core.hooksPath= push (empty value)', () => {
+      const result = checkCommand('git -c core.hooksPath= push origin main')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('push')
+    })
+
+    it('should block git -c "core.hooksPath=/dev/null" push', () => {
+      const result = checkCommand('git -c "core.hooksPath=/dev/null" push')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('push')
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle command chains with --no-verify', () => {
       const result = checkCommand('ls && git commit --no-verify -m "test"')
