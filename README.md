@@ -13,6 +13,12 @@ This package provides a CLI that can block any git commands that include `--no-v
 <a href="https://github.com/langgenius/dify">
   <img src="https://github.com/langgenius.png" width="50" height="50" alt="Dify" title="Dify - Open-source LLM app development platform">
 </a>
+<a href="https://centy.io">
+  <img src="https://github.com/centy-io.png" width="50" height="50" alt="Centy" title="Centy">
+</a>
+<a href="https://worktree.io">
+  <img src="https://github.com/worktree-io.png" width="50" height="50" alt="Worktree" title="Worktree">
+</a>
 
 ## Installation
 
