@@ -26,7 +26,7 @@ This package provides a CLI that can block any git commands that include `--no-v
 pnpm add -g block-no-verify
 ```
 
-Or use without installation via `pnpm dlx block-no-verify` or `npx block-no-verify`.
+Or use without installation via `pnpm dlx block-no-verify` or `npx --yes block-no-verify`.
 
 ## Quick Start
 
