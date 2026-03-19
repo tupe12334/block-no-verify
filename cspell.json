@@ -26,7 +26,8 @@
     "doas",
     "nohup",
     "strace",
-    "Dify"
+    "Dify",
+    "infile"
   ],
   "languageSettings": [
     {

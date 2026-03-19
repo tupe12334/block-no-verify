@@ -1,4 +1,10 @@
 {
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "conventionalcommits",
+      "infile": "CHANGELOG.md"
+    }
+  },
   "git": {
     "commitMessage": "chore(release): bump version to ${version}",
     "tagName": "v${version}",
@@ -9,7 +15,8 @@
     "publish": true
   },
   "github": {
-    "release": true
+    "release": true,
+    "releaseNotes": null
   },
   "hooks": {
     "before:init": ["pnpm test --run", "pnpm build"]
