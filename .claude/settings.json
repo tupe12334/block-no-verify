@@ -81,7 +81,9 @@
       "Bash(pnpm centy --help:*)",
       "Bash(node debug-ast.mjs:*)",
       "Bash(git config:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh search:*)"
     ]
   },
   "hooks": {
