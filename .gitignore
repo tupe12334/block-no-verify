@@ -48,3 +48,6 @@ eslint-report.json
 .cache/
 .local/
 *.local.*
+
+# Local temporary AI workspace directories
+tmp-*/
