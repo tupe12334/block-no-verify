@@ -63,6 +63,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -116,6 +118,4 @@ jobs:
 
       - name: Publish to npm
         if: steps.version_check.outputs.should_publish == 'true'
-        run: pnpm publish --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --access public --no-git-checks --provenance
