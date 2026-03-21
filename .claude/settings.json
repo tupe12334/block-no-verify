@@ -83,7 +83,13 @@
       "Bash(git config:*)",
       "Bash(pnpm build:*)",
       "Bash(gh repo:*)",
-      "Bash(gh search:*)"
+      "Bash(gh search:*)",
+      "WebFetch(domain:docs.npmjs.com)",
+      "WebFetch(domain:philna.sh)",
+      "WebFetch(domain:github.blog)",
+      "WebFetch(domain:ankush.one)",
+      "WebFetch(domain:remarkablemark.org)",
+      "WebFetch(domain:dev.to)"
     ]
   },
   "hooks": {
