@@ -22,11 +22,15 @@ This package provides a CLI that can block any git commands that include `--no-v
 
 ## Installation
 
+Add as a dev dependency to ensure a consistent, pinned version:
+
 ```bash
-pnpm add -g block-no-verify
+pnpm add -D block-no-verify
+# or
+npm install --save-dev block-no-verify
 ```
 
-Or use without installation via `pnpm dlx block-no-verify` or `npx --yes block-no-verify`.
+Then use it with `pnpm exec block-no-verify` or `npm exec block-no-verify`.
 
 ## Quick Start
 
@@ -59,7 +63,7 @@ Add to your `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "pnpm dlx block-no-verify"
+            "command": "pnpm exec block-no-verify"
           }
         ]
       }
@@ -84,7 +88,7 @@ Add to your `.gemini/settings.json`:
           {
             "name": "block-no-verify",
             "type": "command",
-            "command": "pnpm dlx block-no-verify",
+            "command": "pnpm exec block-no-verify",
             "description": "Block --no-verify flags in git commands",
             "timeout": 5000
           }
@@ -109,7 +113,7 @@ Create `.cursor/hooks.json` in your project root:
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": "pnpm dlx block-no-verify"
+        "command": "pnpm exec block-no-verify"
       }
     ]
   }
