@@ -69,31 +69,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Check if version changed
+      - name: Check if version is unpublished
         id: version_check
         run: |
-          # Get current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           echo "Current version: $CURRENT_VERSION"
 
-          # Get version from previous commit
-          git checkout HEAD~1 package.json 2>/dev/null || echo "No previous commit"
-          PREV_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "none")
-          echo "Previous version: $PREV_VERSION"
-
-          # Restore current package.json
-          git checkout HEAD package.json
-
-          # Compare versions
-          if [ "$CURRENT_VERSION" != "$PREV_VERSION" ]; then
-            echo "Version changed from $PREV_VERSION to $CURRENT_VERSION"
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          else
-            echo "Version unchanged, skipping publish"
+          if npm view "block-no-verify@$CURRENT_VERSION" version 2>/dev/null | grep -q "$CURRENT_VERSION"; then
+            echo "Version $CURRENT_VERSION already published, skipping"
             echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version $CURRENT_VERSION not found in registry, will publish"
+            echo "should_publish=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Install pnpm
