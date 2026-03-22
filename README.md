@@ -11,7 +11,22 @@ This package provides a CLI that can block any git commands that include `--no-v
 ## Used By
 
 <a href="https://github.com/langgenius/dify">
-  <img src="https://github.com/langgenius.png" width="50" height="50" alt="Dify" title="Dify - Open-source LLM app development platform">
+  <img src="https://github.com/langgenius.png" width="50" height="50" alt="Dify" title="Dify - Open-source LLM app development platform (133k★)">
+</a>
+<a href="https://github.com/nicolargo/glances">
+  <img src="https://github.com/nicolargo.png" width="50" height="50" alt="Glances" title="Glances - Cross-platform system monitoring tool (32k★)">
+</a>
+<a href="https://github.com/pubkey/rxdb">
+  <img src="https://github.com/pubkey.png" width="50" height="50" alt="RxDB" title="RxDB - Local-first database for JavaScript applications (23k★)">
+</a>
+<a href="https://github.com/promptfoo/promptfoo">
+  <img src="https://github.com/promptfoo.png" width="50" height="50" alt="Promptfoo" title="Promptfoo - LLM testing and evaluation framework (18k★)">
+</a>
+<a href="https://github.com/YFGaia/dify-plus">
+  <img src="https://github.com/YFGaia.png" width="50" height="50" alt="Dify Plus" title="Dify Plus - Enhanced Dify distribution (2k★)">
+</a>
+<a href="https://github.com/forcedotcom/salesforcedx-vscode">
+  <img src="https://github.com/forcedotcom.png" width="50" height="50" alt="Salesforce Extensions for VS Code" title="Salesforce Extensions for VS Code (1k★)">
 </a>
 <a href="https://centy.io">
   <img src="https://github.com/centy-io.png" width="50" height="50" alt="Centy" title="Centy">
