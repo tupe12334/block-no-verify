@@ -1,7 +1,10 @@
 /**
  * CLI help text
  */
-export const HELP_TEXT = `block-no-verify - Block --no-verify flags in git commands
+export const HELP_TEXT = `block-no-verify - Block ways to bypass local git hooks
+
+Blocks --no-verify flags, core.hooksPath overrides, and GitHub MCP tool calls
+that write through the GitHub API (e.g. mcp__github__push_files).
 
 USAGE:
   block-no-verify [options] [command]
@@ -34,8 +37,8 @@ SUPPORTED JSON FIELDS:
   - script
 
 EXIT CODES:
-  0 - Command is allowed
-  2 - Command is blocked (contains --no-verify)
+  0 - Command / tool call is allowed
+  2 - Command / tool call is blocked (bypasses git hooks)
   1 - An error occurred
 
 EXAMPLES:

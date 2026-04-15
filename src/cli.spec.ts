@@ -246,6 +246,56 @@ describe('CLI', () => {
     })
   })
 
+  describe('GitHub MCP blocking', () => {
+    it('should block mcp__github__push_files tool call', async () => {
+      const input = JSON.stringify({
+        tool_name: 'mcp__github__push_files',
+        tool_input: { owner: 'o', repo: 'r', branch: 'main', files: [] },
+      })
+      const result = await runCli(input)
+      expect(result.code).toBe(2)
+      expect(result.stderr).toContain('BLOCKED')
+      expect(result.stderr).toContain('mcp__github__push_files')
+    })
+
+    it('should block mcp__github__create_or_update_file tool call', async () => {
+      const input = JSON.stringify({
+        tool_name: 'mcp__github__create_or_update_file',
+        tool_input: { owner: 'o', repo: 'r', path: 'a', content: 'x' },
+      })
+      const result = await runCli(input)
+      expect(result.code).toBe(2)
+      expect(result.stderr).toContain('BLOCKED')
+    })
+
+    it('should block mcp__github__merge_pull_request tool call', async () => {
+      const input = JSON.stringify({
+        tool_name: 'mcp__github__merge_pull_request',
+        tool_input: { owner: 'o', repo: 'r', pullNumber: 1 },
+      })
+      const result = await runCli(input)
+      expect(result.code).toBe(2)
+    })
+
+    it('should allow read-only GitHub MCP tool calls', async () => {
+      const input = JSON.stringify({
+        tool_name: 'mcp__github__get_file_contents',
+        tool_input: { owner: 'o', repo: 'r', path: 'README.md' },
+      })
+      const result = await runCli(input)
+      expect(result.code).toBe(0)
+    })
+
+    it('should allow Bash tool calls with safe commands', async () => {
+      const input = JSON.stringify({
+        tool_name: 'Bash',
+        tool_input: { command: 'git commit -m "safe"' },
+      })
+      const result = await runCli(input)
+      expect(result.code).toBe(0)
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle JSON with non-string command (fallback)', async () => {
       const input = JSON.stringify({ command: 123 })

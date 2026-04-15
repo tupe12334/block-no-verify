@@ -115,6 +115,65 @@ describe('checkCommand', () => {
     })
   })
 
+  describe('blocking GitHub MCP tools', () => {
+    it('should block mcp__github__push_files', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__github__push_files',
+      })
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain('BLOCKED')
+      expect(result.reason).toContain('mcp__github__push_files')
+      expect(result.reason).toContain('bypass')
+    })
+
+    it('should block mcp__github__create_or_update_file', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__github__create_or_update_file',
+      })
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block mcp__github__delete_file', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__github__delete_file',
+      })
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block mcp__github__merge_pull_request', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__github__merge_pull_request',
+      })
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block mcp__github__update_pull_request_branch', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__github__update_pull_request_branch',
+      })
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should allow read-only GitHub MCP tools', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__github__get_file_contents',
+      })
+      expect(result.blocked).toBe(false)
+    })
+
+    it('should allow unrelated MCP tools', () => {
+      const result = checkCommand('', {
+        toolName: 'mcp__other__push_files',
+      })
+      expect(result.blocked).toBe(false)
+    })
+
+    it('should still work when options is omitted (backwards compatible)', () => {
+      const result = checkCommand('git commit -m "test"')
+      expect(result.blocked).toBe(false)
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle command chains with --no-verify', () => {
       const result = checkCommand('ls && git commit --no-verify -m "test"')

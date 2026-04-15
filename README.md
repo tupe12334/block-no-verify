@@ -1,12 +1,16 @@
 # block-no-verify
 
-A platform-agnostic security tool that blocks the `--no-verify` flag in git commands. Designed to prevent AI agents from bypassing git hooks.
+A platform-agnostic security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, and GitHub MCP tool calls that write through the GitHub API.
 
 ## Why?
 
-When using AI coding assistants like Claude Code, Gemini CLI, Cursor, or others, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. The `--no-verify` flag allows bypassing these hooks, which could allow AI agents to skip important validations.
+When using AI coding assistants like Claude Code, Gemini CLI, Cursor, or others, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. Agents can side-step those hooks in three common ways:
 
-This package provides a CLI that can block any git commands that include `--no-verify`, working with any AI tool that supports command hooks.
+- passing `--no-verify` to a git command,
+- overriding `core.hooksPath` (e.g. `git -c core.hooksPath=/dev/null ...`),
+- calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely.
+
+This package provides a CLI that can block all three, working with any AI tool that supports command / tool-use hooks.
 
 ## Used By
 
@@ -67,7 +71,7 @@ echo "git push --no-verify" | block-no-verify
 
 ### Claude Code
 
-Add to your `.claude/settings.json`:
+Add to your `.claude/settings.json`. The first matcher handles shell commands (`--no-verify`, `core.hooksPath`); the second matches any GitHub MCP tool so direct-to-API writes can also be blocked:
 
 ```json
 {
@@ -75,6 +79,15 @@ Add to your `.claude/settings.json`:
     "PreToolUse": [
       {
         "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm exec block-no-verify"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__github__.*",
         "hooks": [
           {
             "type": "command",
@@ -181,6 +194,18 @@ The following git commands are monitored for `--no-verify`:
 - `git cherry-pick`
 - `git rebase`
 - `git am`
+
+## Blocked GitHub MCP Tools
+
+When a Claude Code / MCP-compatible payload includes a `tool_name`, the following GitHub MCP tools are blocked because they write through the GitHub API and therefore skip local git hooks:
+
+- `mcp__github__create_or_update_file`
+- `mcp__github__delete_file`
+- `mcp__github__push_files`
+- `mcp__github__merge_pull_request`
+- `mcp__github__update_pull_request_branch`
+
+Read-only GitHub MCP tools (e.g. `mcp__github__get_file_contents`, `mcp__github__list_pull_requests`) are not blocked.
 
 ## Behavior
 

@@ -70,8 +70,11 @@ async function main(): Promise<void> {
       process.exit(EXIT_CODES.ALLOWED)
     }
 
-    const { command } = parseInput(rawInput, args.format)
-    const result = checkCommand(command)
+    const { command, toolName } = parseInput(rawInput, args.format)
+    const result =
+      toolName === undefined
+        ? checkCommand(command)
+        : checkCommand(command, { toolName })
 
     if (result.blocked) {
       console.error(result.reason)
