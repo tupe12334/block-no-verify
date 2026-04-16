@@ -89,7 +89,8 @@
       "WebFetch(domain:github.blog)",
       "WebFetch(domain:ankush.one)",
       "WebFetch(domain:remarkablemark.org)",
-      "WebFetch(domain:dev.to)"
+      "WebFetch(domain:dev.to)",
+      "Bash(gh pr *)"
     ]
   },
   "hooks": {
