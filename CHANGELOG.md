@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.5](https://github.com/tupe12334/block-no-verify/compare/v1.1.4...v1.1.5) (2026-04-16)
+
+### Features
+
+- block GitHub MCP tools that bypass local git hooks ([#2](https://github.com/tupe12334/block-no-verify/issues/2)) ([7323a7c](https://github.com/tupe12334/block-no-verify/commit/7323a7c75d3c0529ff3ea866bf0fe705eda5152c))
+
 ## 1.1.4 (2026-03-24)
 
 ### Features
