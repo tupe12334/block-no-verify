@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@polyhook/sdk':
+        specifier: ^0.1.1
+        version: 0.1.1
     devDependencies:
       '@commitlint/cli':
         specifier: ^20.5.0
@@ -1110,6 +1114,10 @@ packages:
   '@phun-ky/typeof@2.0.3':
     resolution: {integrity: sha512-oeQJs1aa8Ghke8JIK9yuq/+KjMiaYeDZ38jx7MhkXncXlUKjqQ3wEm2X3qCKyjo+ZZofZj+WsEEiqkTtRuE2xQ==}
     engines: {node: ^20.9.0 || >=22.0.0, npm: '>=10.8.2'}
+
+  '@polyhook/sdk@0.1.1':
+    resolution: {integrity: sha512-7iwtp+uEpnJSfclknsDHcwovKVhGgoXDM5F6h0w88osQPR42mYA4xZirJw4A/UF7NoxrNwbcN2ujvUnQR+kXpg==}
+    engines: {node: '>=18'}
 
   '@release-it/conventional-changelog@10.0.6':
     resolution: {integrity: sha512-aUb0IkcsBTMcOH5PPQ9Jv9lEOOVu2+rSgkE1ny+dzsTziQm2BhDRAtaFK/dw/HflthuXMWrqhhyfJhAV1AOEPQ==}
@@ -4833,6 +4841,8 @@ snapshots:
 
   '@phun-ky/typeof@2.0.3': {}
 
+  '@polyhook/sdk@0.1.1': {}
+
   '@release-it/conventional-changelog@10.0.6(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.3.0)(release-it@19.2.4(@types/node@25.5.0)(magicast@0.5.2))':
     dependencies:
       '@conventional-changelog/git-client': 2.6.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.3.0)
@@ -5022,8 +5032,8 @@ snapshots:
 
   '@typescript-eslint/project-service@8.52.0(typescript@5.9.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.52.0(typescript@5.9.3)
-      '@typescript-eslint/types': 8.52.0
+      '@typescript-eslint/tsconfig-utils': 8.57.2(typescript@5.9.3)
+      '@typescript-eslint/types': 8.57.2
       debug: 4.4.3
       typescript: 5.9.3
     transitivePeerDependencies:

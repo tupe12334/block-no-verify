@@ -1,92 +1,19 @@
 #!/usr/bin/env node
-/**
- * block-no-verify CLI
- *
- * A platform-agnostic tool to block --no-verify flags in git commands.
- * Works with Claude Code, Gemini CLI, Cursor, and other AI coding tools.
- */
+/* eslint-disable ddd/require-spec-file */
+import { createRequire } from 'node:module'
+import type { HookSdk } from './hook-sdk.js'
+import { runHook } from './run-hook.js'
 
-import { parseArgs } from './cli-args.js'
-import { HELP_TEXT } from './cli-help.js'
-import { parseInput } from './parse-input.js'
-import { checkCommand, EXIT_CODES } from './index.js'
-
-const VERSION = '1.1.0'
-
-async function readStdin(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let data = ''
-
-    process.stdin.setEncoding('utf8')
-
-    process.stdin.on('data', chunk => {
-      data += chunk
-    })
-
-    process.stdin.on('end', () => {
-      resolve(data)
-    })
-
-    process.stdin.on('error', err => {
-      reject(err)
-    })
-
-    if (process.stdin.isTTY) {
-      resolve('')
-    }
-  })
-}
-
-function handleError(message: string): never {
-  console.error(message)
-  console.error('Valid formats: auto, plain, claude-code, json')
-  console.error('Use --help for usage information')
-  process.exit(EXIT_CODES.ERROR)
-}
+const _require = createRequire(import.meta.url)
+const sdk: HookSdk = _require('@polyhook/sdk')
 
 async function main(): Promise<void> {
-  try {
-    const args = parseArgs(process.argv.slice(2), handleError)
-
-    if (args.showHelp) {
-      console.log(HELP_TEXT)
-      process.exit(EXIT_CODES.ALLOWED)
-    }
-
-    if (args.showVersion) {
-      console.log(VERSION)
-      process.exit(EXIT_CODES.ALLOWED)
-    }
-
-    // Get input from argument or stdin
-    let rawInput: string
-    if (args.command !== null) {
-      rawInput = args.command
-    } else {
-      rawInput = await readStdin()
-    }
-
-    if (!rawInput.trim()) {
-      process.exit(EXIT_CODES.ALLOWED)
-    }
-
-    const { command, toolName } = parseInput(rawInput, args.format)
-    const result =
-      toolName === undefined
-        ? checkCommand(command)
-        : checkCommand(command, { toolName })
-
-    if (result.blocked) {
-      console.error(result.reason)
-      process.exit(EXIT_CODES.BLOCKED)
-    }
-
-    process.exit(EXIT_CODES.ALLOWED)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error('Error:', message)
-    process.exit(EXIT_CODES.ERROR)
-  }
+  const event = await sdk.read()
+  await runHook(event, sdk)
 }
 
-main()
+main().catch(err => {
+  const message = err instanceof Error ? err.message : String(err)
+  console.error('Error:', message)
+  process.exit(1)
+})
