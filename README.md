@@ -1,16 +1,18 @@
 # block-no-verify
 
-A platform-agnostic security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, and GitHub MCP tool calls that write through the GitHub API.
+A security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, and GitHub MCP tool calls that write through the GitHub API.
+
+Powered by [`@polyhook/sdk`](https://github.com/tupe12334/polyhook) — write the hook once, run it everywhere.
 
 ## Why?
 
-When using AI coding assistants like Claude Code, Gemini CLI, Cursor, or others, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. Agents can side-step those hooks in three common ways:
+When using AI coding assistants like Claude Code, Cursor, Windsurf, Cline, or Amp, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. Agents can side-step those hooks in three common ways:
 
 - passing `--no-verify` to a git command,
 - overriding `core.hooksPath` (e.g. `git -c core.hooksPath=/dev/null ...`),
 - calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely.
 
-This package provides a CLI that can block all three, working with any AI tool that supports command / tool-use hooks.
+This package provides a CLI that blocks all three, working with any AI tool that supports command / tool-use hooks.
 
 ## Used By
 
@@ -39,6 +41,17 @@ This package provides a CLI that can block all three, working with any AI tool t
   <img src="https://github.com/worktree-io.png" width="50" height="50" alt="Worktree" title="Worktree">
 </a>
 
+## Supported Agents
+
+| Agent                                                     | Status       |
+| --------------------------------------------------------- | ------------ |
+| [Claude Code](https://claude.ai/code)                     | ✅ Supported |
+| [Cursor](https://cursor.com)                              | ✅ Supported |
+| [Windsurf](https://windsurf.ai)                           | ✅ Supported |
+| [Cline](https://github.com/cline/cline)                   | ✅ Supported |
+| [Amp](https://ampcode.com)                                | ✅ Supported |
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | ✅ Supported |
+
 ## Installation
 
 Add as a dev dependency to ensure a consistent, pinned version:
@@ -51,27 +64,11 @@ npm install --save-dev block-no-verify
 
 Then use it with `pnpm exec block-no-verify` or `npm exec block-no-verify`.
 
-## Quick Start
-
-```bash
-# Check a command directly
-block-no-verify "git commit --no-verify -m 'test'"
-# Exit code: 2 (blocked)
-
-# Check a safe command
-block-no-verify "git commit -m 'test'"
-# Exit code: 0 (allowed)
-
-# Pipe from stdin
-echo "git push --no-verify" | block-no-verify
-# Exit code: 2 (blocked)
-```
-
 ## Platform Integration
 
 ### Claude Code
 
-Add to your `.claude/settings.json`. The first matcher handles shell commands (`--no-verify`, `core.hooksPath`); the second matches any GitHub MCP tool so direct-to-API writes can also be blocked:
+Add to your `.claude/settings.json`. The first matcher handles shell commands (`--no-verify`, `core.hooksPath`); the second matches any GitHub MCP tool so direct-to-API writes are also blocked:
 
 ```json
 {
@@ -100,35 +97,6 @@ Add to your `.claude/settings.json`. The first matcher handles shell commands (`
 }
 ```
 
-### Gemini CLI
-
-Gemini CLI supports hooks via `.gemini/settings.json`. The hook system mirrors Claude Code's JSON-over-stdin contract and exit code semantics.
-
-Add to your `.gemini/settings.json`:
-
-```json
-{
-  "hooks": {
-    "BeforeTool": [
-      {
-        "matcher": "run_shell_command",
-        "hooks": [
-          {
-            "name": "block-no-verify",
-            "type": "command",
-            "command": "pnpm exec block-no-verify",
-            "description": "Block --no-verify flags in git commands",
-            "timeout": 5000
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-> **Note:** Hooks are disabled by default in Gemini CLI. You may need to enable them in your settings. See [Gemini CLI Hooks Documentation](https://geminicli.com/docs/hooks/) for details.
-
 ### Cursor
 
 Cursor 1.7+ supports hooks via `.cursor/hooks.json`. The `beforeShellExecution` hook runs before any shell command.
@@ -150,39 +118,53 @@ Create `.cursor/hooks.json` in your project root:
 
 > **Note:** Cursor hooks are in beta. See [Cursor Hooks Documentation](https://cursor.com/docs/agent/hooks) for the latest information.
 
-### Generic Integration
+### Windsurf
 
-block-no-verify accepts input in multiple formats:
+Add to your `.windsurf/settings.json`:
 
-```bash
-# Plain text (default)
-block-no-verify "git commit --no-verify"
-
-# JSON with command field
-echo '{"command":"git commit --no-verify"}' | block-no-verify
-
-# JSON with other fields (cmd, input, shell, script)
-echo '{"cmd":"git push --no-verify"}' | block-no-verify
-
-# Claude Code format (auto-detected)
-echo '{"tool_input":{"command":"git commit --no-verify"}}' | block-no-verify
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm exec block-no-verify"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-## CLI Options
+### Gemini CLI
 
-```text
-block-no-verify [options] [command]
+Add to your `.gemini/settings.json`:
 
-Options:
-  --format <type>   Input format: auto, plain, claude-code, json (default: auto)
-  --help, -h        Show help message
-  --version, -v     Show version
-
-Input Methods:
-  1. Command argument:  block-no-verify "git commit --no-verify"
-  2. Stdin (plain):     echo "git commit --no-verify" | block-no-verify
-  3. Stdin (JSON):      echo '{"command":"..."}' | block-no-verify
+```json
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "name": "block-no-verify",
+            "type": "command",
+            "command": "pnpm exec block-no-verify",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
+
+> **Note:** Hooks are disabled by default in Gemini CLI. See [Gemini CLI Hooks Documentation](https://geminicli.com/docs/hooks/) for details.
 
 ## Supported Git Commands
 
@@ -197,7 +179,7 @@ The following git commands are monitored for `--no-verify`:
 
 ## Blocked GitHub MCP Tools
 
-When a Claude Code / MCP-compatible payload includes a `tool_name`, the following GitHub MCP tools are blocked because they write through the GitHub API and therefore skip local git hooks:
+The following GitHub MCP tools are blocked because they write through the GitHub API and therefore skip local git hooks:
 
 - `mcp__github__create_or_update_file`
 - `mcp__github__delete_file`
@@ -219,25 +201,6 @@ Read-only GitHub MCP tools (e.g. `mcp__github__get_file_contents`, `mcp__github_
 | `git merge -n`           | No       | `-n` means `--no-commit` in merge             |
 | `git commit -m "msg"`    | No       | No `--no-verify` flag                         |
 
-## Exit Codes
-
-- `0` - Command is allowed
-- `2` - Command is blocked (contains `--no-verify`)
-- `1` - An error occurred
-
-## Supported JSON Fields
-
-When using JSON input (auto-detected or with `--format json`), the following fields are recognized:
-
-| Field                | Description               |
-| -------------------- | ------------------------- |
-| `tool_input.command` | Claude Code format        |
-| `command`            | Generic command field     |
-| `cmd`                | Alternative command field |
-| `input`              | Input field               |
-| `shell`              | Shell command field       |
-| `script`             | Script field              |
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
@@ -248,6 +211,7 @@ MIT
 
 ## References
 
+- [polyhook SDK](https://github.com/tupe12334/polyhook)
 - [Claude Code Hooks](https://docs.anthropic.com/en/docs/claude-code)
 - [Gemini CLI Hooks](https://geminicli.com/docs/hooks/)
 - [Cursor Hooks](https://cursor.com/docs/agent/hooks)
