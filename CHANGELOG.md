@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0](https://github.com/tupe12334/block-no-verify/compare/v1.1.5...v1.2.0) (2026-06-02)
+
+### Features
+
+- replace custom stdin parsing with @polyhook/sdk ([#4](https://github.com/tupe12334/block-no-verify/issues/4)) ([b4b2610](https://github.com/tupe12334/block-no-verify/commit/b4b261065aa962af8f03e40e623f856cb333fe49)), closes [#5](https://github.com/tupe12334/block-no-verify/issues/5)
+
 ## [1.1.5](https://github.com/tupe12334/block-no-verify/compare/v1.1.4...v1.1.5) (2026-04-16)
 
 ### Features
