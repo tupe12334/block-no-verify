@@ -81,6 +81,6 @@
     "vitest": "^4.1.1"
   },
   "dependencies": {
-    "@polyhook/sdk": "^0.1.1"
+    "@polyhook/sdk": "^0.1.3"
   }
 }

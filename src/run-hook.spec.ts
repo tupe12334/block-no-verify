@@ -25,7 +25,6 @@ function makeEvent(overrides: Partial<HookEvent>): HookEvent {
 
 function makeSdk(): HookSdk {
   return {
-    read: vi.fn(),
     respond: vi.fn().mockResolvedValue(undefined),
     block: vi.fn(makeBlockResponse),
     approve: vi.fn(makeApproveResponse),

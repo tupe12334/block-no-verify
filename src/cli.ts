@@ -1,15 +1,11 @@
 #!/usr/bin/env node
 /* eslint-disable ddd/require-spec-file */
-import { createRequire } from 'node:module'
-import type { HookSdk } from './hook-sdk.js'
+import { read, respond, block, approve } from '@polyhook/sdk'
 import { runHook } from './run-hook.js'
 
-const _require = createRequire(import.meta.url)
-const sdk: HookSdk = _require('@polyhook/sdk')
-
 async function main(): Promise<void> {
-  const event = await sdk.read()
-  await runHook(event, sdk)
+  const event = await read()
+  await runHook(event, { respond, block, approve })
 }
 
 main().catch(err => {
