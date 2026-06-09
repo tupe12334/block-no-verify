@@ -23,7 +23,7 @@ This package provides a CLI that blocks all three, working with any AI tool that
   <img src="https://github.com/nicolargo.png" width="50" height="50" alt="Glances" title="Glances - Cross-platform system monitoring tool (32k★)">
 </a>
 <a href="https://github.com/pubkey/rxdb">
-  <img src="https://github.com/pubkey.png" width="50" height="50" alt="RxDB" title="RxDB - Local-first database for JavaScript applications (23k★)">
+  <img src="https://raw.githubusercontent.com/pubkey/rxdb/master/docs-src/static/files/logo/rxdb_mini.svg" width="50" height="50" alt="RxDB" title="RxDB - Local-first database for JavaScript applications (23k★)">
 </a>
 <a href="https://github.com/promptfoo/promptfoo">
   <img src="https://github.com/promptfoo.png" width="50" height="50" alt="Promptfoo" title="Promptfoo - LLM testing and evaluation framework (18k★)">
