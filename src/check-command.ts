@@ -4,14 +4,13 @@ import { detectGitCommand } from './detect-git-command.js'
 import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
+import { issuesUrl } from './package-info.js'
 
 /**
  * Note appended to every block reason instructing the agent to report a
  * suspected false positive by opening an issue on the project's repository.
  */
-const FALSE_POSITIVE_NOTE =
-  // eslint-disable-next-line default/no-hardcoded-urls -- intentional: the project issue tracker the agent should report false positives to
-  'If you believe this is a false positive, open an issue at https://github.com/tupe12334/block-no-verify/issues/new describing the command that was blocked.'
+const FALSE_POSITIVE_NOTE = `If you believe this is a false positive, open an issue at ${issuesUrl()} describing the command that was blocked.`
 
 /**
  * Checks a command input for --no-verify flag usage, hooks path override, or
