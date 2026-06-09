@@ -15,6 +15,8 @@
     "doas",
     "esbenp",
     "eslint",
+    "heredoc",
+    "heredocs",
     "husky",
     "infile",
     "lcov",
