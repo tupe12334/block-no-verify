@@ -82,6 +82,63 @@ describe('hasNoVerifyFlag', () => {
     })
   })
 
+  describe('--no-verify inside a quoted message value (false positives)', () => {
+    it('should NOT match --no-verify inside a commit -m message body', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "chore: guard against --no-verify bypass"',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('should NOT match --no-verify mentioned in a -m message about push', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "docs: mention git push --no-verify in README"',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('should NOT match --no-verify inside a heredoc command substitution', () => {
+      const input = [
+        `git commit -m "$(cat <<'EOF'`,
+        'chore: add block-no-verify to guard git hooks',
+        '',
+        'Blocks the --no-verify flag so hooks cannot be bypassed.',
+        'EOF',
+        ')"',
+      ].join('\n')
+      expect(hasNoVerifyFlag(input, 'commit')).toBe(false)
+    })
+
+    it('should NOT match --no-verify inside an unquoted heredoc body', () => {
+      const input = [
+        'git commit -F - <<EOF',
+        'explain the --no-verify guard',
+        'EOF',
+      ].join('\n')
+      expect(hasNoVerifyFlag(input, 'commit')).toBe(false)
+    })
+
+    it('should NOT match -n tokens inside a -m message body', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "kubectl logs -n kube-system"', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match -n<word> inside a -m message body', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "the -nebula network"', 'commit')
+      ).toBe(false)
+    })
+
+    it('should still detect a quoted --no-verify in flag position', () => {
+      expect(hasNoVerifyFlag('git commit "--no-verify"', 'commit')).toBe(true)
+    })
+  })
+
   describe('commands without --no-verify', () => {
     it('should return false for commit without --no-verify', () => {
       expect(hasNoVerifyFlag('git commit -m "test"', 'commit')).toBe(false)
