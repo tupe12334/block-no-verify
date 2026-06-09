@@ -189,5 +189,27 @@ describe('checkCommand', () => {
       const result = checkCommand('git -C /path commit --no-verify -m "test"')
       expect(result.blocked).toBe(true)
     })
+
+    it('should allow --no-verify mentioned inside a commit message body', () => {
+      const result = checkCommand(
+        'git commit -m "chore: guard against --no-verify bypass"'
+      )
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should allow --no-verify inside a heredoc command substitution', () => {
+      const input = [
+        `git commit -m "$(cat <<'EOF'`,
+        'chore: add block-no-verify to guard git hooks',
+        '',
+        'Blocks the --no-verify flag so hooks cannot be bypassed.',
+        'EOF',
+        ')"',
+      ].join('\n')
+      const result = checkCommand(input)
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
   })
 })
