@@ -43,14 +43,7 @@ This package provides a CLI that blocks all three, working with any AI tool that
 
 ## Supported Agents
 
-| Agent                                                     | Status       |
-| --------------------------------------------------------- | ------------ |
-| [Claude Code](https://claude.ai/code)                     | ✅ Supported |
-| [Cursor](https://cursor.com)                              | ✅ Supported |
-| [Windsurf](https://windsurf.ai)                           | ✅ Supported |
-| [Cline](https://github.com/cline/cline)                   | ✅ Supported |
-| [Amp](https://ampcode.com)                                | ✅ Supported |
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | ✅ Supported |
+See [polyhook's supported tools list](https://github.com/tupe12334/polyhook#supported-tools).
 
 ## Installation
 
