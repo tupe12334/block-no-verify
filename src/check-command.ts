@@ -6,6 +6,14 @@ import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
 
 /**
+ * Note appended to every block reason instructing the agent to report a
+ * suspected false positive by opening an issue on the project's repository.
+ */
+const FALSE_POSITIVE_NOTE =
+  // eslint-disable-next-line default/no-hardcoded-urls -- intentional: the project issue tracker the agent should report false positives to
+  'If you believe this is a false positive, open an issue at https://github.com/tupe12334/block-no-verify/issues/new describing the command that was blocked.'
+
+/**
  * Checks a command input for --no-verify flag usage, hooks path override, or
  * a direct GitHub MCP tool invocation that would bypass local git hooks.
  *
@@ -25,7 +33,7 @@ export function checkCommand(
   if (blockedMcpTool !== null) {
     return {
       blocked: true,
-      reason: `BLOCKED: ${blockedMcpTool} bypasses local git hooks by writing through the GitHub API. Use local git commands so hooks can run.`,
+      reason: `BLOCKED: ${blockedMcpTool} bypasses local git hooks by writing through the GitHub API. Use local git commands so hooks can run. ${FALSE_POSITIVE_NOTE}`,
     }
   }
 
@@ -38,7 +46,7 @@ export function checkCommand(
   if (hasNoVerifyFlag(input, gitCommand)) {
     return {
       blocked: true,
-      reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed.`,
+      reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }
@@ -46,7 +54,7 @@ export function checkCommand(
   if (hasHooksPathOverride(input)) {
     return {
       blocked: true,
-      reason: `BLOCKED: Overriding core.hooksPath is not allowed with git ${gitCommand}. Git hooks must not be bypassed.`,
+      reason: `BLOCKED: Overriding core.hooksPath is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }
