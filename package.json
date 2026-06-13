@@ -70,7 +70,7 @@
     "@vitest/coverage-v8": "^4.1.1",
     "cspell": "^9.7.0",
     "eslint": "^9.39.4",
-    "eslint-config-agent": "^1.9.3",
+    "eslint-config-agent": "^3.0.4",
     "eslint-config-publishable-package-json": "^1.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "husky": "^9.1.7",

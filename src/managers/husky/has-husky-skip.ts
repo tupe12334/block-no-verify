@@ -8,7 +8,8 @@
  * after a shell separator/space, so unrelated variables such as `OTHER_HUSKY=0`
  * are not matched. A leading `export`/`env` keyword is handled implicitly by
  * the separator before `HUSKY`.
- *
+ * @param input - The command string to scan.
+ * @returns True when HUSKY=0 is detected in the command.
  * @see https://typicode.github.io/husky/how-to.html
  */
 export function hasHuskySkip(input: string): boolean {

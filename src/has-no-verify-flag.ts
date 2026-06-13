@@ -2,6 +2,9 @@ import type { GitCommand } from './git-command.js'
 
 /**
  * Checks if the input contains a --no-verify flag for a specific git command
+ * @param input - The command string to scan.
+ * @param command - The detected git sub-command.
+ * @returns True when the command string contains a flag that bypasses hooks.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
   // Check for --no-verify
