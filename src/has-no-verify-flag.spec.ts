@@ -139,6 +139,64 @@ describe('hasNoVerifyFlag', () => {
     })
   })
 
+  describe('flags belonging to another command in a compound line', () => {
+    it('should NOT match -n that belongs to git log after &&', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit --no-edit && git log --oneline -n 3',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('should NOT match -n that belongs to kubectl after &&', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "x" && kubectl logs -n kube-system',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('should NOT match -n belonging to git log after ;', () => {
+      expect(hasNoVerifyFlag('git commit -m x ; git log -n 3', 'commit')).toBe(
+        false
+      )
+    })
+
+    it('should NOT match -n belonging to git log on the next line', () => {
+      expect(hasNoVerifyFlag('git commit -m x\ngit log -n 3', 'commit')).toBe(
+        false
+      )
+    })
+
+    it('should NOT match -n belonging to a piped command', () => {
+      expect(hasNoVerifyFlag('git commit -m x | head -n 3', 'commit')).toBe(
+        false
+      )
+    })
+
+    it('should NOT match --no-verify belonging to another command', () => {
+      expect(
+        hasNoVerifyFlag('echo "--no-verify" && git commit -m x', 'commit')
+      ).toBe(false)
+    })
+
+    it('should still detect -n on the git commit segment of a compound line', () => {
+      expect(hasNoVerifyFlag('ls && git commit -n -m x', 'commit')).toBe(true)
+    })
+
+    it('should still detect --no-verify after a leading command', () => {
+      expect(
+        hasNoVerifyFlag('ls && git commit --no-verify -m x', 'commit')
+      ).toBe(true)
+    })
+
+    it('should detect -n inside a command substitution', () => {
+      expect(hasNoVerifyFlag('echo $(git commit -n)', 'commit')).toBe(true)
+    })
+  })
+
   describe('commands without --no-verify', () => {
     it('should return false for commit without --no-verify', () => {
       expect(hasNoVerifyFlag('git commit -m "test"', 'commit')).toBe(false)
