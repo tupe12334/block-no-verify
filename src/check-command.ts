@@ -4,6 +4,13 @@ import { detectGitCommand } from './detect-git-command.js'
 import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
+import { issuesUrl } from './package-info.js'
+
+/**
+ * Note appended to every block reason instructing the agent to report a
+ * suspected false positive by opening an issue on the project's repository.
+ */
+const FALSE_POSITIVE_NOTE = `If you believe this is a false positive, open an issue at ${issuesUrl()} describing the command that was blocked.`
 
 /**
  * Checks a command input for --no-verify flag usage, hooks path override, or
@@ -25,7 +32,7 @@ export function checkCommand(
   if (blockedMcpTool !== null) {
     return {
       blocked: true,
-      reason: `BLOCKED: ${blockedMcpTool} bypasses local git hooks by writing through the GitHub API. Use local git commands so hooks can run.`,
+      reason: `BLOCKED: ${blockedMcpTool} bypasses local git hooks by writing through the GitHub API. Use local git commands so hooks can run. ${FALSE_POSITIVE_NOTE}`,
     }
   }
 
@@ -38,7 +45,7 @@ export function checkCommand(
   if (hasNoVerifyFlag(input, gitCommand)) {
     return {
       blocked: true,
-      reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed.`,
+      reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }
@@ -46,7 +53,7 @@ export function checkCommand(
   if (hasHooksPathOverride(input)) {
     return {
       blocked: true,
-      reason: `BLOCKED: Overriding core.hooksPath is not allowed with git ${gitCommand}. Git hooks must not be bypassed.`,
+      reason: `BLOCKED: Overriding core.hooksPath is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }

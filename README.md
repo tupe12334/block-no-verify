@@ -20,10 +20,10 @@ This package provides a CLI that blocks all three, working with any AI tool that
   <img src="https://github.com/langgenius.png" width="50" height="50" alt="Dify" title="Dify - Open-source LLM app development platform (133k★)">
 </a>
 <a href="https://github.com/nicolargo/glances">
-  <img src="https://github.com/nicolargo.png" width="50" height="50" alt="Glances" title="Glances - Cross-platform system monitoring tool (32k★)">
+  <img src="https://raw.githubusercontent.com/nicolargo/glances/develop/docs/_static/Glances%20Text%20Logo.svg" width="50" height="50" alt="Glances" title="Glances - Cross-platform system monitoring tool (32k★)">
 </a>
 <a href="https://github.com/pubkey/rxdb">
-  <img src="https://github.com/pubkey.png" width="50" height="50" alt="RxDB" title="RxDB - Local-first database for JavaScript applications (23k★)">
+  <img src="https://raw.githubusercontent.com/pubkey/rxdb/master/docs-src/static/files/logo/rxdb_mini.svg" width="50" height="50" alt="RxDB" title="RxDB - Local-first database for JavaScript applications (23k★)">
 </a>
 <a href="https://github.com/promptfoo/promptfoo">
   <img src="https://github.com/promptfoo.png" width="50" height="50" alt="Promptfoo" title="Promptfoo - LLM testing and evaluation framework (18k★)">
@@ -43,14 +43,7 @@ This package provides a CLI that blocks all three, working with any AI tool that
 
 ## Supported Agents
 
-| Agent                                                     | Status       |
-| --------------------------------------------------------- | ------------ |
-| [Claude Code](https://claude.ai/code)                     | ✅ Supported |
-| [Cursor](https://cursor.com)                              | ✅ Supported |
-| [Windsurf](https://windsurf.ai)                           | ✅ Supported |
-| [Cline](https://github.com/cline/cline)                   | ✅ Supported |
-| [Amp](https://ampcode.com)                                | ✅ Supported |
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | ✅ Supported |
+See [polyhook's supported tools list](https://github.com/tupe12334/polyhook#supported-tools).
 
 ## Installation
 
