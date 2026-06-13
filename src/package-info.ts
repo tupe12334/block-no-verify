@@ -8,9 +8,8 @@ import { MissingBugsUrlError } from './missing-bugs-url-error.js'
  * Resolved relative to this module: at runtime the compiled file lives in
  * dist/, and under tests it lives in src/ — in both cases ../package.json
  * resolves to the package root.
- *
  * @returns The "open a new issue" URL for the project repository.
- * @throws MissingBugsUrlError when package.json has no usable bugs.url.
+ * @throws {MissingBugsUrlError} When package.json has no usable bugs.url.
  */
 export function issuesUrl(): string {
   const pkgUrl = new URL('../package.json', import.meta.url)

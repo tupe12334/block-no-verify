@@ -71,7 +71,7 @@ function parseStdout(stdout: string): Record<string, unknown> {
 
 function isBlocked(stdout: string): boolean {
   try {
-    return parseStdout(stdout)['decision'] === 'block'
+    return parseStdout(stdout).decision === 'block'
   } catch {
     return false
   }
@@ -122,7 +122,7 @@ describe('CLI integration (Claude Code wire format)', () => {
       const result = await runCli(
         claudeCodeEvent('Bash', { command: 'git commit --no-verify -m test' })
       )
-      expect(String(parseStdout(result.stdout)['reason'])).toContain('BLOCKED')
+      expect(String(parseStdout(result.stdout).reason)).toContain('BLOCKED')
     })
   })
 
@@ -176,7 +176,7 @@ describe('CLI integration (Claude Code wire format)', () => {
       const result = await runCli(
         claudeCodeEvent('mcp__github__push_files', {})
       )
-      expect(String(parseStdout(result.stdout)['reason'])).toContain(
+      expect(String(parseStdout(result.stdout).reason)).toContain(
         'mcp__github__push_files'
       )
     })

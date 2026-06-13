@@ -4,7 +4,6 @@ import { BLOCKED_GITHUB_MCP_TOOLS } from './github-mcp-tools.js'
 /**
  * Checks whether a tool name refers to a GitHub MCP tool that bypasses local
  * git hooks.
- *
  * @param toolName - The tool name reported by the AI agent (e.g. from a
  *   Claude Code `PreToolUse` payload).
  * @returns The matched blocked tool name, or null when the tool is not a
