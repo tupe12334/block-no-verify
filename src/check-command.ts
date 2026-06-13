@@ -4,7 +4,7 @@ import { detectGitCommand } from './detect-git-command.js'
 import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
-import { hasHuskySkip } from './managers/husky/has-husky-skip.js'
+import { detectManagerBypass } from './managers/index.js'
 import { issuesUrl } from './package-info.js'
 
 /**
@@ -15,8 +15,8 @@ const FALSE_POSITIVE_NOTE = `If you believe this is a false positive, open an is
 
 /**
  * Checks a command input for --no-verify flag usage, hooks path override, a
- * HUSKY=0 environment override, or a direct GitHub MCP tool invocation that
- * would bypass local git hooks.
+ * tool-specific override handled by a manager (e.g. HUSKY=0), or a direct
+ * GitHub MCP tool invocation that would bypass local git hooks.
  *
  * @param input - The command input to check (typically from stdin in AI agent
  *   hooks). May be an empty string when the invocation is a non-shell tool
@@ -60,10 +60,11 @@ export function checkCommand(
     }
   }
 
-  if (hasHuskySkip(input)) {
+  const managerReason = detectManagerBypass(input, gitCommand)
+  if (managerReason !== null) {
     return {
       blocked: true,
-      reason: `BLOCKED: Setting HUSKY=0 disables husky git hooks for git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
+      reason: `BLOCKED: ${managerReason} ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }
