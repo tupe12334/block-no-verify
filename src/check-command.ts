@@ -4,7 +4,7 @@ import { detectGitCommand } from './detect-git-command.js'
 import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
-import { hasHuskySkip } from './has-husky-skip.js'
+import { hasHuskySkip } from './managers/husky/has-husky-skip.js'
 import { issuesUrl } from './package-info.js'
 
 /**
