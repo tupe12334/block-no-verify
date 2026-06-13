@@ -17,7 +17,6 @@ const FALSE_POSITIVE_NOTE = `If you believe this is a false positive, open an is
  * Checks a command input for --no-verify flag usage, hooks path override, a
  * tool-specific override handled by a manager (e.g. HUSKY=0), or a direct
  * GitHub MCP tool invocation that would bypass local git hooks.
- *
  * @param input - The command input to check (typically from stdin in AI agent
  *   hooks). May be an empty string when the invocation is a non-shell tool
  *   call (e.g. an MCP tool).

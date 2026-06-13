@@ -5,6 +5,9 @@ import { managers } from './managers.js'
  * Runs every registered manager against the input. Returns the first matching
  * manager's core block reason (without the `BLOCKED:` label or false-positive
  * note), or null if no manager matches.
+ * @param input - The command string to scan.
+ * @param gitCommand - The detected git sub-command.
+ * @returns The block reason string, or null when no manager matches.
  */
 export function detectManagerBypass(
   input: string,
