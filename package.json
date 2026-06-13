@@ -67,6 +67,7 @@
     "@cspell/dict-he": "^4.0.5",
     "@release-it/conventional-changelog": "^10.0.6",
     "@types/node": "^25.5.0",
+    "@types/shell-quote": "^1.7.5",
     "@vitest/coverage-v8": "^4.1.1",
     "cspell": "^9.7.0",
     "eslint": "^9.39.4",
@@ -83,6 +84,7 @@
     "vitest": "^4.1.1"
   },
   "dependencies": {
-    "@polyhook/sdk": "^0.1.4"
+    "@polyhook/sdk": "^0.1.4",
+    "shell-quote": "^1.8.4"
   }
 }

@@ -38,6 +38,7 @@ pnpm-debug.log*
 # Claude Code temporary files
 .claude-container/
 .claude-revert-backup-*/
+.claude/worktrees/
 eslint-report.json
 
 # Playwright MCP

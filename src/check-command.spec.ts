@@ -189,5 +189,48 @@ describe('checkCommand', () => {
       const result = checkCommand('git -C /path commit --no-verify -m "test"')
       expect(result.blocked).toBe(true)
     })
+
+    it('should allow --no-verify mentioned inside a commit message body', () => {
+      const result = checkCommand(
+        'git commit -m "chore: guard against --no-verify bypass"'
+      )
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should allow --no-verify inside a heredoc command substitution', () => {
+      const input = [
+        `git commit -m "$(cat <<'EOF'`,
+        'chore: add block-no-verify to guard git hooks',
+        '',
+        'Blocks the --no-verify flag so hooks cannot be bypassed.',
+        'EOF',
+        ')"',
+      ].join('\n')
+      const result = checkCommand(input)
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should allow -n that belongs to git log in a compound line', () => {
+      const result = checkCommand(
+        'git commit --no-edit && git log --oneline -n 3'
+      )
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should allow -n that belongs to kubectl in a compound line', () => {
+      const result = checkCommand(
+        'git commit -m "x" && kubectl logs -n kube-system'
+      )
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should still block a real -n on the git commit segment', () => {
+      const result = checkCommand('ls && git commit -n -m x')
+      expect(result.blocked).toBe(true)
+    })
   })
 })
