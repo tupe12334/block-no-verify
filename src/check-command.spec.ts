@@ -115,6 +115,34 @@ describe('checkCommand', () => {
     })
   })
 
+  describe('blocking HUSKY=0 override', () => {
+    it('should block HUSKY=0 git commit', () => {
+      const result = checkCommand('HUSKY=0 git commit -m "test"')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('commit')
+      expect(result.reason).toContain('BLOCKED')
+      expect(result.reason).toContain('HUSKY=0')
+    })
+
+    it('should block HUSKY=0 git push', () => {
+      const result = checkCommand('HUSKY=0 git push origin main')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('push')
+    })
+
+    it('should block export HUSKY=0 before commit', () => {
+      const result = checkCommand('export HUSKY=0; git commit -m "test"')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBe('commit')
+    })
+
+    it('should not block HUSKY=1 git commit', () => {
+      const result = checkCommand('HUSKY=1 git commit -m "test"')
+      expect(result.blocked).toBe(false)
+      expect(result.gitCommand).toBe('commit')
+    })
+  })
+
   describe('blocking GitHub MCP tools', () => {
     it('should block mcp__github__push_files', () => {
       const result = checkCommand('', {

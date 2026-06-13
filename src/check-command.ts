@@ -4,6 +4,7 @@ import { detectGitCommand } from './detect-git-command.js'
 import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
+import { detectManagerBypass } from './managers/index.js'
 import { issuesUrl } from './package-info.js'
 
 /**
@@ -13,8 +14,9 @@ import { issuesUrl } from './package-info.js'
 const FALSE_POSITIVE_NOTE = `If you believe this is a false positive, open an issue at ${issuesUrl()} describing the command that was blocked.`
 
 /**
- * Checks a command input for --no-verify flag usage, hooks path override, or
- * a direct GitHub MCP tool invocation that would bypass local git hooks.
+ * Checks a command input for --no-verify flag usage, hooks path override, a
+ * tool-specific override handled by a manager (e.g. HUSKY=0), or a direct
+ * GitHub MCP tool invocation that would bypass local git hooks.
  *
  * @param input - The command input to check (typically from stdin in AI agent
  *   hooks). May be an empty string when the invocation is a non-shell tool
@@ -54,6 +56,15 @@ export function checkCommand(
     return {
       blocked: true,
       reason: `BLOCKED: Overriding core.hooksPath is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
+      gitCommand,
+    }
+  }
+
+  const managerReason = detectManagerBypass(input, gitCommand)
+  if (managerReason !== null) {
+    return {
+      blocked: true,
+      reason: `BLOCKED: ${managerReason} ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }
