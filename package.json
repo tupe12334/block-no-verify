@@ -28,8 +28,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
-    "spell": "cspell lint '**/*.{ts,js,md,json}' --gitignore",
-    "spell:check": "cspell lint '**/*.{ts,js,md,json}' --gitignore",
+    "spell": "cspell lint '**/*.{ts,js,md,json}' --gitignore --no-must-find-files",
+    "spell:check": "cspell lint '**/*.{ts,js,md,json}' --gitignore --no-must-find-files",
     "knip": "knip",
     "prepare": "husky",
     "release": "release-it"
