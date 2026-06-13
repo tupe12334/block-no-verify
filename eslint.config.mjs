@@ -5,6 +5,6 @@ export default [
   ...agentConfig,
   publishablePackageJson,
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.mjs', 'tmp-*/'],
+    ignores: ['dist/**', '**/node_modules/**', '*.config.js', '*.config.mjs', 'tmp-*/', '**/.claude/**'],
   },
 ]
