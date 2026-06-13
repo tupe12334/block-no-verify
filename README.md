@@ -1,6 +1,6 @@
 # block-no-verify
 
-A security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, the `HUSKY=0` environment override, and GitHub MCP tool calls that write through the GitHub API.
+A security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, and GitHub MCP tool calls that write through the GitHub API.
 
 Powered by [`@polyhook/sdk`](https://github.com/tupe12334/polyhook) — write the hook once, run it everywhere.
 
@@ -10,10 +10,9 @@ When using AI coding assistants like Claude Code, Cursor, Windsurf, Cline, or Am
 
 - passing `--no-verify` to a git command,
 - overriding `core.hooksPath` (e.g. `git -c core.hooksPath=/dev/null ...`),
-- setting `HUSKY=0` to disable [husky](https://typicode.github.io/husky/) hooks (e.g. `HUSKY=0 git commit ...`),
 - calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely.
 
-This package provides a CLI that blocks all four, working with any AI tool that supports command / tool-use hooks.
+This package provides a CLI that blocks all three, working with any AI tool that supports command / tool-use hooks.
 
 ## Used By
 
@@ -62,7 +61,7 @@ Then use it with `pnpm exec block-no-verify` or `npm exec block-no-verify`.
 
 ### Claude Code
 
-Add to your `.claude/settings.json`. The first matcher handles shell commands (`--no-verify`, `core.hooksPath`, `HUSKY=0`); the second matches any GitHub MCP tool so direct-to-API writes are also blocked:
+Add to your `.claude/settings.json`. The first matcher handles shell commands (`--no-verify`, `core.hooksPath`); the second matches any GitHub MCP tool so direct-to-API writes are also blocked:
 
 ```json
 {
@@ -193,8 +192,6 @@ Read-only GitHub MCP tools (e.g. `mcp__github__get_file_contents`, `mcp__github_
 | `git push -n`            | No       | `-n` means `--dry-run` in push                |
 | `git merge --no-verify`  | Yes      |                                               |
 | `git merge -n`           | No       | `-n` means `--no-commit` in merge             |
-| `HUSKY=0 git commit`     | Yes      | `HUSKY=0` disables husky hooks                |
-| `HUSKY=1 git commit`     | No       | Only `HUSKY=0` disables husky                 |
 | `git commit -m "msg"`    | No       | No `--no-verify` flag                         |
 
 ## Contributing
