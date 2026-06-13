@@ -1,5 +1,7 @@
 import { parse, type ParseEntry } from 'shell-quote'
 import type { GitCommand } from './git-command.js'
+import { splitIntoSegments } from './split-into-segments.js'
+import { gitSubcommandOf } from './git-subcommand-of.js'
 import { stripHeredocs } from './strip-heredocs.js'
 
 /** Long-form flag tokens that always bypass git hooks. */
@@ -41,27 +43,16 @@ function isCommitShortFlagBundleWithN(token: string): boolean {
 }
 
 /**
- * Checks if the input passes a --no-verify flag (or the `-n` shorthand for
- * commit) to a git command. The command is tokenized as argv with `shell-quote`
- * (after here-document bodies are stripped), so the literal text `--no-verify`
- * or `-n…` appearing inside a quoted message value does not count — only a flag
- * in an actual flag position is blocked.
+ * Scans a single git-command segment for a bypass flag in actual flag position,
+ * skipping the value that follows message/file options and redirections.
  */
-export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  let entries: ParseEntry[]
-  try {
-    entries = parse(stripHeredocs(input))
-  } catch {
-    // Fall back to a conservative substring check if the command cannot be
-    // tokenized, so malformed input never silently bypasses the guard.
-    return /--no-verify\b/.test(input)
-  }
-
+function segmentHasBypassFlag(
+  segment: ParseEntry[],
+  command: GitCommand
+): boolean {
   let skipNext = false
-  for (const entry of entries) {
+  for (const entry of segment) {
     if (typeof entry !== 'string') {
-      // Operators end the current word run. A redirection consumes the next
-      // word (a filename / here-string body), so keep skipping past it.
       const op = 'op' in entry ? entry.op : ''
       skipNext = REDIRECTION_OPS.has(op)
       continue
@@ -83,6 +74,34 @@ export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
     if (VALUE_OPTIONS.has(entry)) {
       skipNext = true
     }
+  }
+
+  return false
+}
+
+/**
+ * Checks if the input passes a --no-verify flag (or the `-n` shorthand for
+ * commit) to a git command. The command is tokenized as argv with `shell-quote`
+ * (after here-document bodies are stripped), so the literal text `--no-verify`
+ * or `-n…` appearing inside a quoted message value does not count — only a flag
+ * in an actual flag position is blocked. The scan is scoped to the segment of
+ * the git invocation that actually runs `command`, so a flag belonging to a
+ * different command in a compound line (`git commit … && git log -n 3`) is not
+ * attributed to it.
+ */
+export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
+  let entries: ParseEntry[]
+  try {
+    entries = parse(stripHeredocs(input))
+  } catch {
+    // Fall back to a conservative substring check if the command cannot be
+    // tokenized, so malformed input never silently bypasses the guard.
+    return /--no-verify\b/.test(input)
+  }
+
+  for (const segment of splitIntoSegments(entries)) {
+    if (gitSubcommandOf(segment) !== command) continue
+    if (segmentHasBypassFlag(segment, command)) return true
   }
 
   return false
