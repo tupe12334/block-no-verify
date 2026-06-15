@@ -27,4 +27,9 @@ export default [
       'no-param-reassign': 'error',
     },
   },
+  {
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
 ]

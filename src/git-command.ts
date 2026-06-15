@@ -1,4 +1,4 @@
-import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
+import type { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 
 /**
  * Type representing git commands that support --no-verify
