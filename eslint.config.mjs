@@ -24,4 +24,9 @@ export default [
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
     },
   },
+  {
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
 ]
