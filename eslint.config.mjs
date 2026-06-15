@@ -32,4 +32,12 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
+  {
+    rules: {
+      // Require every union/enum member to be handled in a switch (or a
+      // default clause). Turns a forgotten case for a newly added variant
+      // into a lint error instead of a silent runtime fall-through.
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+    },
+  },
 ]
