@@ -22,6 +22,9 @@ export default [
   {
     rules: {
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      // Disallow reassigning function parameters to avoid confusing
+      // input/local dual-use and the subtle bugs it can mask.
+      'no-param-reassign': 'error',
     },
   },
 ]
