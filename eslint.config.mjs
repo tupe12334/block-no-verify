@@ -32,4 +32,12 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
+  {
+    rules: {
+      // Forbid relying on implicit truthiness of nullable strings/numbers/objects
+      // in conditions. Forces explicit checks (e.g. `s.length > 0`, `x != null`)
+      // so an empty string, 0, or NaN can't silently take the wrong branch.
+      '@typescript-eslint/strict-boolean-expressions': 'error',
+    },
+  },
 ]
