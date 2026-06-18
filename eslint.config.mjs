@@ -32,4 +32,12 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
+  {
+    rules: {
+      // Disallow non-null assertions (`x!`). They silently erase the
+      // compiler's null/undefined guarantee and can turn a catchable type
+      // error into a runtime crash. Use an explicit check or type guard instead.
+      '@typescript-eslint/no-non-null-assertion': 'error',
+    },
+  },
 ]
