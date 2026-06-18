@@ -38,6 +38,10 @@ export default [
       // in conditions. Forces explicit checks (e.g. `s.length > 0`, `x != null`)
       // so an empty string, 0, or NaN can't silently take the wrong branch.
       '@typescript-eslint/strict-boolean-expressions': 'error',
+      // Ban the non-null assertion operator (`!`): it silently erases a real
+      // null-safety guarantee and turns a compile-time-catchable bug into a
+      // runtime TypeError. Force an explicit check, early return, or type guard.
+      '@typescript-eslint/no-non-null-assertion': 'error',
     },
   },
 ]
