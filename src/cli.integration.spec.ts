@@ -89,7 +89,8 @@ describe('CLI integration (Claude Code wire format)', () => {
       const result = await runCli(
         claudeCodeEvent('Bash', { command: 'git commit --no-verify -m test' })
       )
-      expect(result.code).toBe(0)
+      expect(result.code).toBe(2)
+      expect(result.stderr).toContain('BLOCKED')
       expect(isBlocked(result.stdout)).toBe(true)
     })
 
@@ -227,6 +228,41 @@ describe('CLI integration (Claude Code wire format)', () => {
       const result = await runCli(
         claudeCodeEvent('mcp__other_server__do_thing', {})
       )
+      expect(result.code).toBe(0)
+      expect(isBlocked(result.stdout)).toBe(false)
+    })
+  })
+
+  // An event missing `hook_event_name` is what the CLI receives when the raw
+  // tool payload reaches stdin without the Claude Code envelope. polyhook then
+  // labels it `notification` instead of `tool:before`; the CLI must still
+  // block. See https://github.com/tupe12334/block-no-verify/issues/29.
+  describe('event without hook_event_name', () => {
+    it('blocks git push --no-verify', async () => {
+      const result = await runCli({
+        tool_name: 'Bash',
+        tool_input: { command: 'git push --no-verify origin main' },
+      })
+      expect(result.code).toBe(2)
+      expect(result.stderr).toContain('BLOCKED')
+      expect(isBlocked(result.stdout)).toBe(true)
+    })
+
+    it('blocks mcp__github__push_files', async () => {
+      const result = await runCli({
+        tool_name: 'mcp__github__push_files',
+        tool_input: {},
+      })
+      expect(result.code).toBe(2)
+      expect(isBlocked(result.stdout)).toBe(true)
+    })
+
+    it('allows a safe command', async () => {
+      const result = await runCli({
+        tool_name: 'Bash',
+        tool_input: { command: 'git commit -m safe' },
+      })
+      expect(result.code).toBe(0)
       expect(isBlocked(result.stdout)).toBe(false)
     })
   })
