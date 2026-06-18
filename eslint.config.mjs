@@ -32,4 +32,12 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
+  {
+    rules: {
+      // Ban the non-null assertion operator (`!`): it silently erases a real
+      // null-safety guarantee and turns a compile-time-catchable bug into a
+      // runtime TypeError. Force an explicit check, early return, or type guard.
+      '@typescript-eslint/no-non-null-assertion': 'error',
+    },
+  },
 ]
