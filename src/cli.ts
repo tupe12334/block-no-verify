@@ -17,12 +17,14 @@ async function main(): Promise<void> {
   const event = await read()
   const result = await runHook(event, { respond, block, approve })
 
-  if (result.blocked) {
-    if (result.reason !== undefined && result.reason !== '') {
-      console.error(result.reason)
-    }
-    process.exit(EXIT_CODES.BLOCKED)
+  if (!result.blocked) {
+    return
   }
+
+  if (result.reason !== undefined && result.reason !== '') {
+    console.error(result.reason)
+  }
+  process.exit(EXIT_CODES.BLOCKED)
 }
 
 main().catch((err: unknown) => {
