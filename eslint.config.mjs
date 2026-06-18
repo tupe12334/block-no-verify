@@ -40,4 +40,14 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'error',
     },
   },
+  {
+    rules: {
+      // Require strict equality (`===`/`!==`) everywhere. Loose equality
+      // performs implicit type coercion with surprising results (`0 == ''`,
+      // `null == undefined`, `[] == false`), masking bugs that strict
+      // comparison would surface. The TypeScript-ESLint presets do not cover
+      // this, so enable the core rule explicitly.
+      eqeqeq: ['error', 'always'],
+    },
+  },
 ]
