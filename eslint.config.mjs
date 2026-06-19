@@ -115,6 +115,18 @@ export default [
   },
   {
     rules: {
+      // Require every private class member that is only assigned in its
+      // declaration or the constructor to be marked `readonly`. Without it, a
+      // field that is conceptually immutable stays writable, so a stray
+      // reassignment elsewhere in the class compiles silently and the reader
+      // can no longer trust the value is fixed after construction. Marking it
+      // `readonly` turns that accidental write into a compile error and makes
+      // the immutability contract explicit at the declaration site.
+      '@typescript-eslint/prefer-readonly': 'error',
+    },
+  },
+  {
+    rules: {
       // Disallow a variable declaration in an inner scope from shadowing one
       // in an outer scope. Shadowing silently detaches a reference from the
       // outer binding the reader expects (e.g. a local `resolve` callback
