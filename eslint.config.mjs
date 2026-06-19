@@ -54,4 +54,14 @@ export default [
       eqeqeq: ['error', 'always'],
     },
   },
+  {
+    rules: {
+      // Require explicit parameter and return types on exported (module
+      // boundary) functions. For a published package the inferred public API
+      // surface can silently drift when an implementation detail changes; an
+      // explicit annotation pins the contract so a refactor that widens or
+      // narrows a return type fails review instead of leaking to consumers.
+      '@typescript-eslint/explicit-module-boundary-types': 'error',
+    },
+  },
 ]
