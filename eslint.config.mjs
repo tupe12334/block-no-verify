@@ -115,6 +115,19 @@ export default [
   },
   {
     rules: {
+      // Disallow comparing a variable or expression to itself (`x === x`,
+      // `x !== x`, `x < x`, …). Such a comparison is a constant by
+      // construction, so it is almost always a typo for a comparison against
+      // a *different* operand (e.g. `a === b` mistyped as `a === a`) that the
+      // type checker cannot catch. The one legitimate self-comparison —
+      // `x !== x` as a NaN test — is better expressed with `Number.isNaN(x)`,
+      // which states the intent outright. Flagging the pattern converts a
+      // silent always-true/always-false branch into a lint error.
+      'no-self-compare': 'error',
+    },
+  },
+  {
+    rules: {
       // Disallow an `else`/`else if` block when the preceding `if` block ends
       // in a `return`. The else is dead structure: its body already only runs
       // when the `if` did not return, so unindenting it is behaviourally
