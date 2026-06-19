@@ -16,7 +16,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url))
 const cliPath = resolve(currentDir, '../dist/cli.js')
 const BUILD_REQUIRED = "dist/cli.js not found — run 'pnpm build' first"
 
-function runCli(
+async function runCli(
   input: Record<string, unknown>
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise(resolve => {

@@ -75,4 +75,16 @@ export default [
       '@typescript-eslint/explicit-module-boundary-types': 'error',
     },
   },
+  {
+    rules: {
+      // Require any function that returns a Promise to be declared `async`.
+      // Without this, a sync-looking function can return a promise, so a
+      // synchronous `throw` inside it surfaces as a thrown exception at the
+      // call site instead of a rejected promise — two different error paths
+      // for one function. Forcing `async` unifies the contract: the function
+      // always returns a promise and always rejects (never throws), so callers
+      // can rely on a single `try/await` or `.catch` path.
+      '@typescript-eslint/promise-function-async': 'error',
+    },
+  },
 ]
