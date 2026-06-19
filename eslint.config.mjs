@@ -87,4 +87,17 @@ export default [
       '@typescript-eslint/promise-function-async': 'error',
     },
   },
+  {
+    rules: {
+      // Disallow a variable declaration in an inner scope from shadowing one
+      // in an outer scope. Shadowing silently detaches a reference from the
+      // outer binding the reader expects (e.g. a local `resolve` callback
+      // hiding the imported `path.resolve`), so a typo or refactor reads/writes
+      // the wrong variable with no error. The core `no-shadow` is disabled and
+      // replaced by the TS-aware variant, which understands type-vs-value space
+      // (so type names don't falsely collide with values).
+      'no-shadow': 'off',
+      '@typescript-eslint/no-shadow': 'error',
+    },
+  },
 ]
