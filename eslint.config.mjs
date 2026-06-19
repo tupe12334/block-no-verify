@@ -34,10 +34,24 @@ export default [
   },
   {
     rules: {
-      // Disallow non-null assertions (`x!`). They silently erase the
-      // compiler's null/undefined guarantee and can turn a catchable type
-      // error into a runtime crash. Use an explicit check or type guard instead.
+      // Forbid relying on implicit truthiness of nullable strings/numbers/objects
+      // in conditions. Forces explicit checks (e.g. `s.length > 0`, `x != null`)
+      // so an empty string, 0, or NaN can't silently take the wrong branch.
+      '@typescript-eslint/strict-boolean-expressions': 'error',
+      // Ban the non-null assertion operator (`!`): it silently erases a real
+      // null-safety guarantee and turns a compile-time-catchable bug into a
+      // runtime TypeError. Force an explicit check, early return, or type guard.
       '@typescript-eslint/no-non-null-assertion': 'error',
+    },
+  },
+  {
+    rules: {
+      // Require strict equality (`===`/`!==`) everywhere. Loose equality
+      // performs implicit type coercion with surprising results (`0 == ''`,
+      // `null == undefined`, `[] == false`), masking bugs that strict
+      // comparison would surface. The TypeScript-ESLint presets do not cover
+      // this, so enable the core rule explicitly.
+      eqeqeq: ['error', 'always'],
     },
   },
 ]
