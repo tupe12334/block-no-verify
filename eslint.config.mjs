@@ -124,4 +124,17 @@ export default [
       'no-else-return': ['error', { allowElseIf: false }],
     },
   },
+  {
+    rules: {
+      // Require template literals instead of string concatenation (`a + b`).
+      // String `+` silently coerces every non-string operand via `toString`,
+      // so a number, `null`/`undefined`, or an object slips into the result as
+      // `"undefined"` or `"[object Object]"` with no error — a class of bug
+      // that is easy to introduce and hard to spot in review. Template literals
+      // make the interpolation points explicit and keep multi-part strings
+      // readable, removing both the coercion footgun and the `+`-soup it grows
+      // into as more fragments are appended.
+      'prefer-template': 'error',
+    },
+  },
 ]
