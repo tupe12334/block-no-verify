@@ -30,6 +30,13 @@ export default [
   {
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
+      // Mirror consistent-type-imports on the export side: type-only
+      // re-exports must use `export type`. This lets bundlers/transpilers
+      // fully elide them from the runtime graph, preventing accidental
+      // runtime imports of type-only modules and the circular-import
+      // runtime errors that follow, while keeping the package's public
+      // value vs. type surface explicit.
+      '@typescript-eslint/consistent-type-exports': 'error',
     },
   },
   {
