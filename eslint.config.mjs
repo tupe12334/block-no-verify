@@ -77,6 +77,19 @@ export default [
   },
   {
     rules: {
+      // Force function-typed members of interfaces/type literals to be written
+      // as property signatures (`f: (x: X) => Y`) instead of method shorthand
+      // (`f(x: X): Y`). Method shorthand is type-checked bivariantly, so an
+      // implementation with narrower parameter types silently satisfies the
+      // interface and lets an incompatible argument slip through; the property
+      // form is checked contravariantly (strictly), restoring sound parameter
+      // checking. This matters for a published package whose interfaces
+      // (e.g. `HookSdk`, `Manager`) are part of the exported type surface.
+      '@typescript-eslint/method-signature-style': ['error', 'property'],
+    },
+  },
+  {
+    rules: {
       // Require any function that returns a Promise to be declared `async`.
       // Without this, a sync-looking function can return a promise, so a
       // synchronous `throw` inside it surfaces as a thrown exception at the
