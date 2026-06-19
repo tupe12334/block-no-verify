@@ -113,4 +113,15 @@ export default [
       '@typescript-eslint/no-shadow': 'error',
     },
   },
+  {
+    rules: {
+      // Disallow an `else`/`else if` block when the preceding `if` block ends
+      // in a `return`. The else is dead structure: its body already only runs
+      // when the `if` did not return, so unindenting it is behaviourally
+      // identical while flattening one level of nesting. Enforcing the guard-
+      // clause shape keeps branch logic linear and easier to follow, and stops
+      // needless arrow-of-nesting growth as new conditions are added.
+      'no-else-return': ['error', { allowElseIf: false }],
+    },
+  },
 ]
