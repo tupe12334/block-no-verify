@@ -87,4 +87,15 @@ export default [
       '@typescript-eslint/promise-function-async': 'error',
     },
   },
+  {
+    rules: {
+      // Flag conditions that the type system proves are always truthy or
+      // always falsy. An "always true" guard is usually a logic bug — the
+      // author meant to check something meaningful but the type makes the
+      // check a no-op — which is especially dangerous here, where the CLI
+      // guards untrusted git argv for hook-bypass flags. Also removes dead
+      // guard clauses left behind after a refactor narrowed a type.
+      '@typescript-eslint/no-unnecessary-condition': 'error',
+    },
+  },
 ]
