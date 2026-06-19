@@ -56,7 +56,65 @@ describe('runHook', () => {
     })
   })
 
+  describe('misclassified events (missing hook_event_name)', () => {
+    it('should block a notification event that carries a bash command', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        event: 'notification',
+        tool: 'bash',
+        input: { command: 'git push --no-verify origin main' },
+      })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(true)
+      expect(sdk.block).toHaveBeenCalled()
+    })
+
+    it('should block a notification event for a blocked github mcp tool', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        event: 'notification',
+        tool: 'mcp__github__push_files',
+        input: {},
+      })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(true)
+      expect(sdk.block).toHaveBeenCalled()
+    })
+
+    it('should approve a notification event with no tool', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({ event: 'notification', tool: null })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(false)
+      expect(sdk.approve).toHaveBeenCalled()
+    })
+
+    it('should approve a tool:after event even when it carries a command', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        event: 'tool:after',
+        tool: 'bash',
+        input: { command: 'git push --no-verify origin main' },
+        output: { exitCode: 0 },
+      })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(false)
+      expect(sdk.approve).toHaveBeenCalled()
+    })
+  })
+
   describe('blocking commands', () => {
+    it('should return the blocked result', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        tool: 'bash',
+        input: { command: 'git commit --no-verify -m "test"' },
+      })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain('BLOCKED')
+    })
+
     it('should block git commit --no-verify', async () => {
       const sdk = makeSdk()
       const event = makeEvent({

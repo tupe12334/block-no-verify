@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/tupe12334/block-no-verify/compare/v1.2.0...v1.3.0) (2026-06-18)
+
+### Features
+
+- block HUSKY=0 environment override ([#3](https://github.com/tupe12334/block-no-verify/issues/3)) ([#10](https://github.com/tupe12334/block-no-verify/issues/10)) ([3074db3](https://github.com/tupe12334/block-no-verify/commit/3074db3bafd6589933571b22c32ad3db05a310eb))
+- tell agent to report false positives in block message ([#8](https://github.com/tupe12334/block-no-verify/issues/8)) ([33f760b](https://github.com/tupe12334/block-no-verify/commit/33f760b66e0a1bb4fab009fe522d85ae9d8dc70f)), closes [#7](https://github.com/tupe12334/block-no-verify/issues/7)
+
+### Bug Fixes
+
+- actually block bypass attempts in Claude Code hooks ([#29](https://github.com/tupe12334/block-no-verify/issues/29)) ([#30](https://github.com/tupe12334/block-no-verify/issues/30)) ([3d5cb04](https://github.com/tupe12334/block-no-verify/commit/3d5cb0403db15c3ffe56a6692b413eeefd0c9c10))
+- stop scanning commit message bodies for bypass flags ([#26](https://github.com/tupe12334/block-no-verify/issues/26)) ([1384aa1](https://github.com/tupe12334/block-no-verify/commit/1384aa13421019d6db05a939edab1925621a1b5e)), closes [#1](https://github.com/tupe12334/block-no-verify/issues/1) [#5](https://github.com/tupe12334/block-no-verify/issues/5) [#9](https://github.com/tupe12334/block-no-verify/issues/9)
+
 ## [1.2.0](https://github.com/tupe12334/block-no-verify/compare/v1.1.5...v1.2.0) (2026-06-02)
 
 ### Features

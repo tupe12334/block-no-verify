@@ -1,29 +1,98 @@
 import type { GitCommand } from './git-command.js'
+import { tokenizeCommand } from './tokenize-command.js'
 
 /**
- * Checks if the input contains a --no-verify flag for a specific git command
+ * Options that consume the following argv token as their value (a commit
+ * message, a message file, or a commit to reuse/re-edit). The value of these
+ * options is user text and must never be scanned for hook-bypass flags.
+ */
+const VALUE_OPTIONS = new Set([
+  '-m',
+  '--message',
+  '-F',
+  '--file',
+  '-C',
+  '--reuse-message',
+  '-c',
+  '--reedit-message',
+  '--fixup',
+  '--squash',
+])
+
+/**
+ * Short option letters that consume the rest of a short-flag bundle as their
+ * value. A `n` appearing after one of these in a bundle is part of a value, not
+ * the `-n` (`--no-verify`) flag.
+ */
+const SHORT_VALUE_LETTERS = new Set(['m', 'F', 'C', 'c'])
+
+/** The short-flag letter that enables `--no-verify` for `git commit`. */
+const NO_VERIFY_LETTERS = new Set(['n'])
+
+/** Long-form flags that bypass git hooks for every guarded sub-command. */
+const NO_VERIFY_FLAGS = new Set(['--no-verify'])
+
+/**
+ * Returns true when a single-dash short-flag bundle (e.g. `-n`, `-nm`, `-vn`)
+ * contains the `-n` (`--no-verify`) flag. A `n` that follows a value-consuming
+ * letter such as `m` (e.g. `-mn`, where `n` is part of the message) does not
+ * count.
+ * @param token - The argv token to inspect.
+ * @returns True when the bundle enables `--no-verify`.
+ */
+function isShortNoVerifyBundle(token: string): boolean {
+  if (!/^-[a-zA-Z]+$/.test(token)) {
+    return false
+  }
+  for (const letter of token.slice(1)) {
+    if (NO_VERIFY_LETTERS.has(letter)) {
+      return true
+    }
+    if (SHORT_VALUE_LETTERS.has(letter)) {
+      return false
+    }
+  }
+  return false
+}
+
+/**
+ * Checks if the input contains a --no-verify flag for a specific git command.
+ *
+ * The command is tokenized into argv honoring shell quoting, and the value of
+ * message/file options (`-m`, `-F`, `-C`, …) is skipped, so a `--no-verify` or
+ * `-n` appearing inside a commit message body is not mistaken for the flag.
+ * A flag in argv flag-position (including a quoted `git commit "--no-verify"`,
+ * which git still parses as the flag) is still detected.
  * @param input - The command string to scan.
  * @param command - The detected git sub-command.
  * @returns True when the command string contains a flag that bypasses hooks.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  // Check for --no-verify
-  if (/--no-verify\b/.test(input)) {
-    return true
-  }
+  const tokens = tokenizeCommand(input)
+  let skipNext = false
 
-  // For commit, -n is a shorthand for --no-verify
-  // For other commands, -n might mean something else, so we need to be careful
-  if (command === 'commit') {
-    // Match -n as a standalone flag or at the start of combined flags
-    if (/\s-n(?:\s|$)/.test(input) || /\s-n[a-zA-Z]/.test(input)) {
+  for (const token of tokens) {
+    if (skipNext) {
+      skipNext = false
+      continue
+    }
+
+    if (VALUE_OPTIONS.has(token)) {
+      skipNext = true
+      continue
+    }
+
+    // --no-verify is a bypass for every git sub-command we guard.
+    if (NO_VERIFY_FLAGS.has(token)) {
+      return true
+    }
+
+    // For commit, -n is shorthand for --no-verify. For push (-n = --dry-run),
+    // merge (-n = --no-commit), etc. it means something else, so only commit.
+    if (command === 'commit' && isShortNoVerifyBundle(token)) {
       return true
     }
   }
-
-  // For push, -n is --dry-run, not --no-verify
-  // For merge, -n is --no-commit, not --no-verify
-  // So we only block --no-verify (long form) for these
 
   return false
 }

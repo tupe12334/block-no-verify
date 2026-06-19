@@ -27,7 +27,7 @@ export function checkCommand(
   input: string,
   options?: CheckCommandOptions
 ): CheckResult {
-  const toolName = options?.toolName
+  const toolName = options === undefined ? undefined : options.toolName
   const blockedMcpTool = detectBlockedGithubMcpTool(toolName)
   if (blockedMcpTool !== null) {
     return {

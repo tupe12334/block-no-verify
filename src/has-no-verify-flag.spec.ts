@@ -82,6 +82,51 @@ describe('hasNoVerifyFlag', () => {
     })
   })
 
+  describe('false positives from message bodies (issues #1, #5, #9)', () => {
+    it('should NOT match -n inside -m message body (find -name)', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "find scripts -name \'*.sh\'"', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match kubectl -n namespace inside message body', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "kubectl logs -n kube-system"', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match arbitrary -n<word> inside message body', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "the -nebula network"', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match --no-verify text inside -m message body', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "chore: guard against the --no-verify bypass"',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('should NOT match --no-verify inside a multi-line -m message body', () => {
+      const input =
+        'git commit -m "chore: add block-no-verify\n\nblock-no-verify prevents agents from bypassing hooks via the --no-verify flag"'
+      expect(hasNoVerifyFlag(input, 'commit')).toBe(false)
+    })
+
+    it('should NOT match --no-verify inside a heredoc message substitution', () => {
+      const input =
+        'git commit -m "$(cat <<\'EOF\'\nchore: add block-no-verify\n\nBlocks the --no-verify flag so hooks cannot be bypassed.\nEOF\n)"'
+      expect(hasNoVerifyFlag(input, 'commit')).toBe(false)
+    })
+
+    it('should still block a quoted --no-verify flag in flag position', () => {
+      expect(hasNoVerifyFlag('git commit "--no-verify"', 'commit')).toBe(true)
+    })
+  })
+
   describe('commands without --no-verify', () => {
     it('should return false for commit without --no-verify', () => {
       expect(hasNoVerifyFlag('git commit -m "test"', 'commit')).toBe(false)
