@@ -19,7 +19,7 @@ const BUILD_REQUIRED = "dist/cli.js not found — run 'pnpm build' first"
 async function runCli(
   input: Record<string, unknown>
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-  return new Promise(resolve => {
+  return new Promise(resolvePromise => {
     const child = spawn('node', [cliPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
@@ -34,7 +34,7 @@ async function runCli(
       stderr += data.toString()
     })
     child.on('close', code => {
-      resolve({ code: code === null ? 0 : code, stdout, stderr })
+      resolvePromise({ code: code === null ? 0 : code, stdout, stderr })
     })
 
     child.stdin.write(JSON.stringify(input))
