@@ -57,6 +57,19 @@ export default [
   },
   {
     rules: {
+      // Ban stray `console` calls in this published package. A forgotten
+      // `console.log`/`console.debug` left in shipped code writes to the
+      // consumer's stdout/stderr — for a CLI whose stdout is part of its
+      // contract that corrupts machine-readable output, and for library
+      // consumers it leaks internal state as unexpected noise. `console.warn`
+      // and `console.error` stay allowed for the CLI's legitimate diagnostics
+      // (see cli.ts), so intentional error reporting is unaffected while
+      // debug leftovers are turned into a lint error.
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
+  {
+    rules: {
       // Require strict equality (`===`/`!==`) everywhere. Loose equality
       // performs implicit type coercion with surprising results (`0 == ''`,
       // `null == undefined`, `[] == false`), masking bugs that strict
