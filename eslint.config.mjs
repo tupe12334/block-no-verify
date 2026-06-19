@@ -34,6 +34,10 @@ export default [
   },
   {
     rules: {
+      // Require every union/enum member to be handled in a switch (or a
+      // default clause). Turns a forgotten case for a newly added variant
+      // into a lint error instead of a silent runtime fall-through.
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
       // Forbid relying on implicit truthiness of nullable strings/numbers/objects
       // in conditions. Forces explicit checks (e.g. `s.length > 0`, `x != null`)
       // so an empty string, 0, or NaN can't silently take the wrong branch.
