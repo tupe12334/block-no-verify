@@ -164,6 +164,21 @@ export default [
   },
   {
     rules: {
+      // Require a comparator argument for every `Array.prototype.sort` /
+      // `toSorted` call. With no comparator, sort coerces each element to a
+      // string and orders by UTF-16 code units, so a numeric array sorts
+      // lexicographically (`[1, 10, 2, 3]` instead of `[1, 2, 3, 10]`) — a
+      // silent, data-dependent bug that passes small test fixtures and only
+      // surfaces once values cross a digit boundary. Forcing an explicit
+      // comparator (e.g. `(a, b) => a - b`) makes the intended ordering part
+      // of the code instead of an accident of the default. Pure string arrays
+      // keep the default lexicographic order (`ignoreStringArrays`), since
+      // that is already correct and unambiguous for them.
+      '@typescript-eslint/require-array-sort-compare': ['error', { ignoreStringArrays: true }],
+    },
+  },
+  {
+    rules: {
       // Require template literals instead of string concatenation (`a + b`).
       // String `+` silently coerces every non-string operand via `toString`,
       // so a number, `null`/`undefined`, or an object slips into the result as
