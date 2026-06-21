@@ -115,6 +115,17 @@ export default [
   },
   {
     rules: {
+      // Flag conditions that the type system proves are always truthy or
+      // always falsy. An "always true" guard is usually a logic bug — the
+      // author meant to check something meaningful but the type makes the
+      // check a no-op — which is especially dangerous here, where the CLI
+      // guards untrusted git argv for hook-bypass flags. Also removes dead
+      // guard clauses left behind after a refactor narrowed a type.
+      '@typescript-eslint/no-unnecessary-condition': 'error',
+    },
+  },
+  {
+    rules: {
       // Require every private class member that is only assigned in its
       // declaration or the constructor to be marked `readonly`. Without it, a
       // field that is conceptually immutable stays writable, so a stray
