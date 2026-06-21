@@ -57,6 +57,19 @@ export default [
   },
   {
     rules: {
+      // Ban stray `console` calls in this published package. A forgotten
+      // `console.log`/`console.debug` left in shipped code writes to the
+      // consumer's stdout/stderr — for a CLI whose stdout is part of its
+      // contract that corrupts machine-readable output, and for library
+      // consumers it leaks internal state as unexpected noise. `console.warn`
+      // and `console.error` stay allowed for the CLI's legitimate diagnostics
+      // (see cli.ts), so intentional error reporting is unaffected while
+      // debug leftovers are turned into a lint error.
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
+  {
+    rules: {
       // Require strict equality (`===`/`!==`) everywhere. Loose equality
       // performs implicit type coercion with surprising results (`0 == ''`,
       // `null == undefined`, `[] == false`), masking bugs that strict
@@ -73,6 +86,19 @@ export default [
       // explicit annotation pins the contract so a refactor that widens or
       // narrows a return type fails review instead of leaking to consumers.
       '@typescript-eslint/explicit-module-boundary-types': 'error',
+    },
+  },
+  {
+    rules: {
+      // Force function-typed members of interfaces/type literals to be written
+      // as property signatures (`f: (x: X) => Y`) instead of method shorthand
+      // (`f(x: X): Y`). Method shorthand is type-checked bivariantly, so an
+      // implementation with narrower parameter types silently satisfies the
+      // interface and lets an incompatible argument slip through; the property
+      // form is checked contravariantly (strictly), restoring sound parameter
+      // checking. This matters for a published package whose interfaces
+      // (e.g. `HookSdk`, `Manager`) are part of the exported type surface.
+      '@typescript-eslint/method-signature-style': ['error', 'property'],
     },
   },
   {
@@ -96,6 +122,83 @@ export default [
       // guards untrusted git argv for hook-bypass flags. Also removes dead
       // guard clauses left behind after a refactor narrowed a type.
       '@typescript-eslint/no-unnecessary-condition': 'error',
+    },
+  },
+  {
+    rules: {
+      // Require every private class member that is only assigned in its
+      // declaration or the constructor to be marked `readonly`. Without it, a
+      // field that is conceptually immutable stays writable, so a stray
+      // reassignment elsewhere in the class compiles silently and the reader
+      // can no longer trust the value is fixed after construction. Marking it
+      // `readonly` turns that accidental write into a compile error and makes
+      // the immutability contract explicit at the declaration site.
+      '@typescript-eslint/prefer-readonly': 'error',
+    },
+  },
+  {
+    rules: {
+      // Disallow a variable declaration in an inner scope from shadowing one
+      // in an outer scope. Shadowing silently detaches a reference from the
+      // outer binding the reader expects (e.g. a local `resolve` callback
+      // hiding the imported `path.resolve`), so a typo or refactor reads/writes
+      // the wrong variable with no error. The core `no-shadow` is disabled and
+      // replaced by the TS-aware variant, which understands type-vs-value space
+      // (so type names don't falsely collide with values).
+      'no-shadow': 'off',
+      '@typescript-eslint/no-shadow': 'error',
+    },
+  },
+  {
+    rules: {
+      // Disallow comparing a variable or expression to itself (`x === x`,
+      // `x !== x`, `x < x`, …). Such a comparison is a constant by
+      // construction, so it is almost always a typo for a comparison against
+      // a *different* operand (e.g. `a === b` mistyped as `a === a`) that the
+      // type checker cannot catch. The one legitimate self-comparison —
+      // `x !== x` as a NaN test — is better expressed with `Number.isNaN(x)`,
+      // which states the intent outright. Flagging the pattern converts a
+      // silent always-true/always-false branch into a lint error.
+      'no-self-compare': 'error',
+    },
+  },
+  {
+    rules: {
+      // Disallow an `else`/`else if` block when the preceding `if` block ends
+      // in a `return`. The else is dead structure: its body already only runs
+      // when the `if` did not return, so unindenting it is behaviourally
+      // identical while flattening one level of nesting. Enforcing the guard-
+      // clause shape keeps branch logic linear and easier to follow, and stops
+      // needless arrow-of-nesting growth as new conditions are added.
+      'no-else-return': ['error', { allowElseIf: false }],
+    },
+  },
+  {
+    rules: {
+      // Require a comparator argument for every `Array.prototype.sort` /
+      // `toSorted` call. With no comparator, sort coerces each element to a
+      // string and orders by UTF-16 code units, so a numeric array sorts
+      // lexicographically (`[1, 10, 2, 3]` instead of `[1, 2, 3, 10]`) — a
+      // silent, data-dependent bug that passes small test fixtures and only
+      // surfaces once values cross a digit boundary. Forcing an explicit
+      // comparator (e.g. `(a, b) => a - b`) makes the intended ordering part
+      // of the code instead of an accident of the default. Pure string arrays
+      // keep the default lexicographic order (`ignoreStringArrays`), since
+      // that is already correct and unambiguous for them.
+      '@typescript-eslint/require-array-sort-compare': ['error', { ignoreStringArrays: true }],
+    },
+  },
+  {
+    rules: {
+      // Require template literals instead of string concatenation (`a + b`).
+      // String `+` silently coerces every non-string operand via `toString`,
+      // so a number, `null`/`undefined`, or an object slips into the result as
+      // `"undefined"` or `"[object Object]"` with no error — a class of bug
+      // that is easy to introduce and hard to spot in review. Template literals
+      // make the interpolation points explicit and keep multi-part strings
+      // readable, removing both the coercion footgun and the `+`-soup it grows
+      // into as more fragments are appended.
+      'prefer-template': 'error',
     },
   },
 ]
