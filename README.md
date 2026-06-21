@@ -194,6 +194,10 @@ Read-only GitHub MCP tools (e.g. `mcp__github__get_file_contents`, `mcp__github_
 | `git merge -n`           | No       | `-n` means `--no-commit` in merge             |
 | `git commit -m "msg"`    | No       | No `--no-verify` flag                         |
 
+## Testing
+
+This package is end-to-end tested daily via the [moadim.io](https://moadim.io) tool.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
