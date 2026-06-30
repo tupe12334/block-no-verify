@@ -67,7 +67,9 @@ export function detectGitCommand(input: string): GitCommand | null {
       if (cmdIdx === -1) continue
       const before = cmdIdx > 0 ? input[cmdIdx - 1] : ' '
       const after = input[cmdIdx + cmd.length] || ' '
-      if (!/\s/.test(before)) continue
+      // Allow whitespace or an opening quote before the sub-command so that
+      // git "push" (shell-quoted sub-command) is detected as well as git push.
+      if (!/[\s"']/.test(before)) continue
       if (!/[\s;&#|>)\]}"']/.test(after) && after !== '') continue
       if (/[;|]/.test(input.slice(git.idx + git.len, cmdIdx))) continue
       if (isInComment(input, cmdIdx)) continue

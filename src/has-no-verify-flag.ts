@@ -29,8 +29,17 @@ const SHORT_VALUE_LETTERS = new Set(['m', 'F', 'C', 'c'])
 /** The short-flag letter that enables `--no-verify` for `git commit`. */
 const NO_VERIFY_LETTERS = new Set(['n'])
 
-/** Long-form flags that bypass git hooks for every guarded sub-command. */
-const NO_VERIFY_FLAGS = new Set(['--no-verify'])
+/**
+ * Returns true when the token is an unambiguous git abbreviation of
+ * `--no-verify`. Git accepts any prefix of a long option that is long enough
+ * to be unambiguous; the shortest accepted prefix is `--no-veri` (8 chars after
+ * the leading `--`). Anything shorter is ambiguous and rejected by git itself.
+ * @param token - The argv token to inspect.
+ * @returns True when the token is a valid abbreviation of `--no-verify`.
+ */
+function isNoVerifyAbbreviation(token: string): boolean {
+  return '--no-verify'.startsWith(token) && token.startsWith('--no-veri')
+}
 
 /**
  * Returns true when a single-dash short-flag bundle (e.g. `-n`, `-nm`, `-vn`)
@@ -83,7 +92,8 @@ export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
     }
 
     // --no-verify is a bypass for every git sub-command we guard.
-    if (NO_VERIFY_FLAGS.has(token)) {
+    // Also match valid git long-option abbreviations (e.g. --no-veri, --no-verif).
+    if (isNoVerifyAbbreviation(token)) {
       return true
     }
 

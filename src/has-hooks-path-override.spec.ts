@@ -54,6 +54,24 @@ describe('hasHooksPathOverride', () => {
     })
   })
 
+  describe('GIT_CONFIG_* environment variable injection (Group C bypass — issue #56)', () => {
+    it('should detect GIT_CONFIG_COUNT + GIT_CONFIG_KEY_i=core.hooksPath', () => {
+      expect(
+        hasHooksPathOverride(
+          'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git push'
+        )
+      ).toBe(true)
+    })
+
+    it('should detect GIT_CONFIG_PARAMETERS containing core.hooksPath', () => {
+      expect(
+        hasHooksPathOverride(
+          'GIT_CONFIG_PARAMETERS="\'core.hooksPath=/dev/null\'" git push'
+        )
+      ).toBe(true)
+    })
+  })
+
   describe('should not detect false positives', () => {
     it('should not detect normal git push', () => {
       expect(hasHooksPathOverride('git push origin main')).toBe(false)

@@ -369,4 +369,24 @@ describe('detectGitCommand', () => {
       expect(detectGitCommand('zsh -c "git commit -m test"')).toBe('commit')
     })
   })
+
+  describe('quoted sub-command (Group A bypass — issue #56)', () => {
+    it('should detect git "push" --no-verify (double-quoted sub-command)', () => {
+      expect(detectGitCommand('git "push" --no-verify origin main')).toBe(
+        'push'
+      )
+    })
+
+    it("should detect git 'push' --no-verify (single-quoted sub-command)", () => {
+      expect(detectGitCommand("git 'push' --no-verify origin main")).toBe(
+        'push'
+      )
+    })
+
+    it('should detect git "commit" --no-verify', () => {
+      expect(detectGitCommand('git "commit" --no-verify -m "msg"')).toBe(
+        'commit'
+      )
+    })
+  })
 })

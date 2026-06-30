@@ -127,6 +127,32 @@ describe('hasNoVerifyFlag', () => {
     })
   })
 
+  describe('--no-verify abbreviations (Group B bypass — issue #56)', () => {
+    it('should detect --no-veri abbreviation in push', () => {
+      expect(hasNoVerifyFlag('git push --no-veri origin main', 'push')).toBe(
+        true
+      )
+    })
+
+    it('should detect --no-verif abbreviation in push', () => {
+      expect(hasNoVerifyFlag('git push --no-verif origin main', 'push')).toBe(
+        true
+      )
+    })
+
+    it('should detect --no-veri abbreviation in commit', () => {
+      expect(hasNoVerifyFlag('git commit --no-veri -m "msg"', 'commit')).toBe(
+        true
+      )
+    })
+
+    it('should NOT detect --no-ver (ambiguous, rejected by git)', () => {
+      expect(hasNoVerifyFlag('git push --no-ver origin main', 'push')).toBe(
+        false
+      )
+    })
+  })
+
   describe('commands without --no-verify', () => {
     it('should return false for commit without --no-verify', () => {
       expect(hasNoVerifyFlag('git commit -m "test"', 'commit')).toBe(false)
