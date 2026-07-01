@@ -1,5 +1,6 @@
-import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 import type { GitCommand } from './git-command.js'
+import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
+import { findSubCommand } from './find-git-subcommand.js'
 
 const VALID_BEFORE_GIT = ' \t\n\r;&|$`(<{!"\']/.~\\'
 
@@ -49,33 +50,31 @@ function findGit(
 }
 
 /**
- * Checks if the input contains a git command
+ * Checks if the input contains a git command. `input` is first passed
+ * through a best-effort expansion of trivial `NAME=value` assignments (see
+ * {@link expandSimpleVariableRefs}), so hiding `git` itself or its
+ * sub-command behind a simple variable (e.g. `g=git; $g push`) does not
+ * defeat detection. The sub-command is then located via
+ * {@link findSubCommand}, which also tolerates a sub-command split up by
+ * shell quoting (e.g. `git pu"sh"`), on top of the plain whole-word/quoted
+ * cases the raw-text scan already handles.
  * @param input - The command string to scan for a git sub-command.
  * @returns The detected git sub-command, or null when none is found.
  */
 export function detectGitCommand(input: string): GitCommand | null {
+  const expanded = expandSimpleVariableRefs(input)
   let start = 0
-  while (start < input.length) {
-    const git = findGit(input, start)
+  while (start < expanded.length) {
+    const git = findGit(expanded, start)
     if (!git) return null
-    if (isInComment(input, git.idx)) {
+    if (isInComment(expanded, git.idx)) {
       start = git.idx + git.len
       continue
     }
-    for (const cmd of GIT_COMMANDS_WITH_NO_VERIFY) {
-      const cmdIdx = input.indexOf(cmd, git.idx + git.len)
-      if (cmdIdx === -1) continue
-      const before = cmdIdx > 0 ? input[cmdIdx - 1] : ' '
-      const after = input[cmdIdx + cmd.length] || ' '
-      // Allow whitespace or an opening quote before the sub-command so that
-      // git "push" (shell-quoted sub-command) is detected as well as git push.
-      if (!/[\s"']/.test(before)) continue
-      if (!/[\s;&#|>)\]}"']/.test(after) && after !== '') continue
-      if (/[;|]/.test(input.slice(git.idx + git.len, cmdIdx))) continue
-      if (isInComment(input, cmdIdx)) continue
-      return cmd
-    }
-    start = git.idx + git.len
+    const searchStart = git.idx + git.len
+    const cmd = findSubCommand(expanded, searchStart)
+    if (cmd) return cmd
+    start = searchStart
   }
   return null
 }

@@ -389,4 +389,26 @@ describe('detectGitCommand', () => {
       )
     })
   })
+
+  describe('sub-command split by quotes or supplied via a variable (Group A follow-up — issue #56)', () => {
+    it('should detect a sub-command split by double quotes: git pu"sh"', () => {
+      expect(detectGitCommand('git pu"sh" --no-verify origin main')).toBe(
+        'push'
+      )
+    })
+
+    it("should detect a sub-command split by single quotes: git p'us'h", () => {
+      expect(detectGitCommand("git p'us'h --no-verify origin main")).toBe(
+        'push'
+      )
+    })
+
+    it('should detect a sub-command supplied via a variable: c=push; git $c', () => {
+      expect(detectGitCommand('c=push; git $c --no-verify')).toBe('push')
+    })
+
+    it('should detect git itself supplied via a variable: g=git; $g push', () => {
+      expect(detectGitCommand('g=git; $g push --no-verify')).toBe('push')
+    })
+  })
 })

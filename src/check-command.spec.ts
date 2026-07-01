@@ -218,4 +218,110 @@ describe('checkCommand', () => {
       expect(result.blocked).toBe(true)
     })
   })
+
+  describe('issue #56: bypass detection gaps', () => {
+    describe('group A: sub-command detection evasion via quotes/variables', () => {
+      it('should block git "push" --no-verify (quoted sub-command)', () => {
+        const result = checkCommand('git "push" --no-verify origin main')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+
+      it('should block git pu"sh" --no-verify (sub-command split by double quotes)', () => {
+        const result = checkCommand('git pu"sh" --no-verify origin main')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+
+      it("should block git p'us'h --no-verify (sub-command split by single quotes)", () => {
+        const result = checkCommand("git p'us'h --no-verify origin main")
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+
+      it('should block c=push; git $c --no-verify (sub-command via variable)', () => {
+        const result = checkCommand('c=push; git $c --no-verify')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+
+      it('should block g=git; $g push --no-verify (git itself via variable)', () => {
+        const result = checkCommand('g=git; $g push --no-verify')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+    })
+
+    describe('group B: --no-verify abbreviation', () => {
+      it('should block git push --no-veri origin main', () => {
+        const result = checkCommand('git push --no-veri origin main')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+
+      it('should block git commit --no-veri -m "msg"', () => {
+        const result = checkCommand('git commit --no-veri -m "msg"')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('commit')
+      })
+    })
+
+    describe('group C: core.hooksPath via environment config injection', () => {
+      it('should block GIT_CONFIG_KEY_0/VALUE_0=core.hooksPath', () => {
+        const result = checkCommand(
+          'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git push'
+        )
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+
+      it('should block GIT_CONFIG_PARAMETERS with core.hooksPath', () => {
+        const result = checkCommand(
+          'GIT_CONFIG_PARAMETERS="\'core.hooksPath=/dev/null\'" git push'
+        )
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+      })
+    })
+
+    describe('group D: hook-manager coverage beyond husky', () => {
+      it('should block LEFTHOOK=0 git push', () => {
+        const result = checkCommand('LEFTHOOK=0 git push origin main')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+        expect(result.reason).toContain('LEFTHOOK=0')
+      })
+
+      it('should block OVERCOMMIT_DISABLE=1 git push', () => {
+        const result = checkCommand('OVERCOMMIT_DISABLE=1 git push origin main')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+        expect(result.reason).toContain('OVERCOMMIT_DISABLE=1')
+      })
+
+      it('should block SKIP=pre-push git push', () => {
+        const result = checkCommand('SKIP=pre-push git push origin main')
+        expect(result.blocked).toBe(true)
+        expect(result.gitCommand).toBe('push')
+        expect(result.reason).toContain('SKIP')
+      })
+    })
+
+    describe('controls: legitimate commands that must stay allowed', () => {
+      it('should allow git commit -m "fix core.hooksPath= issue"', () => {
+        const result = checkCommand('git commit -m "fix core.hooksPath= issue"')
+        expect(result.blocked).toBe(false)
+      })
+
+      it('should allow git push -n origin main (dry-run)', () => {
+        const result = checkCommand('git push -n origin main')
+        expect(result.blocked).toBe(false)
+      })
+
+      it('should allow HUSKY=1 git commit -m x (hooks enabled)', () => {
+        const result = checkCommand('HUSKY=1 git commit -m x')
+        expect(result.blocked).toBe(false)
+      })
+    })
+  })
 })
