@@ -140,4 +140,62 @@ describe('hasNoVerifyFlag', () => {
       expect(hasNoVerifyFlag('git merge feature', 'merge')).toBe(false)
     })
   })
+
+  // Ported from the deleted src/tokenize-command.spec.ts: these exercise the
+  // underlying shell-quote tokenization (quoting/escaping/whitespace rules)
+  // through the public hasNoVerifyFlag API now that the custom tokenizer is
+  // gone.
+  describe('tokenizer semantics (quoting, escaping, whitespace)', () => {
+    it('treats a single-quoted segment as fully literal', () => {
+      expect(
+        hasNoVerifyFlag(
+          "git commit -m 'text with --no-verify inside single quotes'",
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('keeps a double-quoted -m value as one token, splitting only on whitespace outside quotes', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "a normal message" --no-verify',
+          'commit'
+        )
+      ).toBe(true)
+    })
+
+    it('honors backslash-escaped quotes inside a double-quoted value, so an escaped quote does not end the value early', () => {
+      // If the escaped `\"` were mishandled and treated as a real closing
+      // quote, `--no-verify` would land in flag position and be detected.
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "say \\"--no-verify\\" for real"',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('honors bare backslash-escaping outside quotes to reconstruct a flag git would still parse', () => {
+      expect(hasNoVerifyFlag('git commit --no\\-verify', 'commit')).toBe(true)
+    })
+
+    it('splits bare tokens on whitespace outside quotes', () => {
+      expect(
+        hasNoVerifyFlag('git   commit   --no-verify   -m   "test"', 'commit')
+      ).toBe(true)
+    })
+
+    it('returns false for a whitespace-only command', () => {
+      expect(hasNoVerifyFlag('   \n\t ', 'commit')).toBe(false)
+    })
+
+    it('does not crash or misbehave on shell operator tokens like ; or && (out of scope per #56)', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test" && git push --no-verify', 'push')
+      ).toBe(true)
+      expect(hasNoVerifyFlag('git commit -m "test"; echo done', 'commit')).toBe(
+        false
+      )
+    })
+  })
 })
