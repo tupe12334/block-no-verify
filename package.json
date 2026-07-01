@@ -83,6 +83,7 @@
     "vitest": "^4.1.1"
   },
   "dependencies": {
-    "@polyhook/sdk": "^0.1.4"
+    "@polyhook/sdk": "^0.1.4",
+    "shell-quote": "^1.9.0"
   }
 }

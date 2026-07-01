@@ -1,5 +1,5 @@
+import { parse } from 'shell-quote'
 import type { GitCommand } from './git-command.js'
-import { tokenizeCommand } from './tokenize-command.js'
 
 /**
  * Options that consume the following argv token as their value (a commit
@@ -58,17 +58,22 @@ function isShortNoVerifyBundle(token: string): boolean {
 /**
  * Checks if the input contains a --no-verify flag for a specific git command.
  *
- * The command is tokenized into argv honoring shell quoting, and the value of
- * message/file options (`-m`, `-F`, `-C`, …) is skipped, so a `--no-verify` or
- * `-n` appearing inside a commit message body is not mistaken for the flag.
- * A flag in argv flag-position (including a quoted `git commit "--no-verify"`,
- * which git still parses as the flag) is still detected.
+ * The command is tokenized into argv honoring shell quoting (via `shell-quote`),
+ * and the value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
+ * `--no-verify` or `-n` appearing inside a commit message body is not mistaken
+ * for the flag. A flag in argv flag-position (including a quoted
+ * `git commit "--no-verify"`, which git still parses as the flag) is still
+ * detected. Shell operator tokens (`;`, `&&`, `|`, …) that `shell-quote` returns
+ * as `{ op: ... }` objects are filtered out rather than inspected; whether they
+ * should be treated as bypass-relevant boundaries is tracked separately (#56).
  * @param input - The command string to scan.
  * @param command - The detected git sub-command.
  * @returns True when the command string contains a flag that bypasses hooks.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  const tokens = tokenizeCommand(input)
+  const tokens = parse(input).filter(
+    (token): token is string => typeof token === 'string'
+  )
   let skipNext = false
 
   for (const token of tokens) {
