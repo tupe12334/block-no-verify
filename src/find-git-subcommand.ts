@@ -1,6 +1,6 @@
+import { parse } from 'shell-quote'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 import type { GitCommand } from './git-command.js'
-import { tokenizeCommand } from './tokenize-command.js'
 
 /** Statement-separator characters that end the current shell command. */
 const STATEMENT_SEPARATORS = ['\n', ';', '&', '|']
@@ -70,11 +70,12 @@ function findStatementEnd(input: string, start: number): number {
 }
 
 /**
- * Finds the git sub-command by tokenizing the current statement the same way
- * {@link tokenizeCommand} does for flag detection, so a sub-command broken up
- * by shell quoting (e.g. `git pu"sh"`, `git "push"`) still resolves to the
- * plain word the shell would actually pass to `git`. Only used as a fallback
- * once the cheaper raw-text scan finds nothing.
+ * Finds the git sub-command by tokenizing the current statement with
+ * `shell-quote`'s parser (the same one `has-no-verify-flag.ts` uses for flag
+ * detection), so a sub-command broken up by shell quoting (e.g. `git
+ * pu"sh"`, `git "push"`) still resolves to the plain word the shell would
+ * actually pass to `git`. Only used as a fallback once the cheaper raw-text
+ * scan finds nothing.
  * @param input - The full command string.
  * @param searchStart - Offset (just past the `git` token) to search from.
  * @returns The detected git sub-command, or null when none is found.
@@ -84,7 +85,9 @@ function findSubCommandTokenized(
   searchStart: number
 ): GitCommand | null {
   const statementEnd = findStatementEnd(input, searchStart)
-  const tokens = tokenizeCommand(input.slice(searchStart, statementEnd))
+  const tokens = parse(input.slice(searchStart, statementEnd)).filter(
+    (token): token is string => typeof token === 'string'
+  )
   for (const cmd of GIT_COMMANDS_WITH_NO_VERIFY) {
     if (tokens.includes(cmd)) return cmd
   }
