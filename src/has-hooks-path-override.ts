@@ -29,5 +29,15 @@ export function hasHooksPathOverride(input: string): boolean {
     return true
   }
 
+  // Match: git config [--global|--local|--system|--worktree] core.hooksPath <value>
+  // This persistently rewrites the repo (or global) hooks path rather than
+  // overriding it for a single invocation, so it must be blocked even when a
+  // value is set with a space instead of `=`. A bare read (no value, e.g.
+  // `git config core.hooksPath` or `--get`/`--unset`) is intentionally not
+  // matched since it does not redirect hooks.
+  if (/\bconfig\b/.test(input) && /core\.hooksPath\s*[= ]\s*\S/.test(input)) {
+    return true
+  }
+
   return false
 }
