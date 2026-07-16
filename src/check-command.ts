@@ -36,7 +36,20 @@ export function checkCommand(
     }
   }
 
-  const gitCommand = detectGitCommand(input)
+  const detectedGitCommand = detectGitCommand(input)
+  const gitCommand =
+    detectedGitCommand === null ? undefined : detectedGitCommand
+
+  // Checked before the `!gitCommand` early return: a bare `git config
+  // core.hooksPath <value>` persistently redirects hooks without going
+  // through a sub-command (e.g. commit/push) that supports --no-verify.
+  if (hasHooksPathOverride(input)) {
+    return {
+      blocked: true,
+      reason: `BLOCKED: Overriding core.hooksPath is not allowed${gitCommand === undefined ? '' : ` with git ${gitCommand}`}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
+      gitCommand,
+    }
+  }
 
   if (!gitCommand) {
     return { blocked: false }
@@ -46,14 +59,6 @@ export function checkCommand(
     return {
       blocked: true,
       reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
-      gitCommand,
-    }
-  }
-
-  if (hasHooksPathOverride(input)) {
-    return {
-      blocked: true,
-      reason: `BLOCKED: Overriding core.hooksPath is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
     }
   }

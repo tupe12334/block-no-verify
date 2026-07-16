@@ -54,6 +54,42 @@ describe('hasHooksPathOverride', () => {
     })
   })
 
+  describe('git config core.hooksPath (persistent override)', () => {
+    it('should detect git config core.hooksPath /tmp/empty', () => {
+      expect(hasHooksPathOverride('git config core.hooksPath /tmp/empty')).toBe(
+        true
+      )
+    })
+
+    it('should detect git config --global core.hooksPath', () => {
+      expect(
+        hasHooksPathOverride('git config --global core.hooksPath /dev/null')
+      ).toBe(true)
+    })
+
+    it('should detect git config core.hooksPath=<value>', () => {
+      expect(hasHooksPathOverride('git config core.hooksPath=/dev/null')).toBe(
+        true
+      )
+    })
+
+    it('should not detect a bare read of core.hooksPath', () => {
+      expect(hasHooksPathOverride('git config core.hooksPath')).toBe(false)
+    })
+
+    it('should not detect --get core.hooksPath', () => {
+      expect(hasHooksPathOverride('git config --get core.hooksPath')).toBe(
+        false
+      )
+    })
+
+    it('should not detect --unset core.hooksPath', () => {
+      expect(hasHooksPathOverride('git config --unset core.hooksPath')).toBe(
+        false
+      )
+    })
+  })
+
   describe('GIT_CONFIG_* environment variable injection (Group C bypass — issue #56)', () => {
     it('should detect GIT_CONFIG_COUNT + GIT_CONFIG_KEY_i=core.hooksPath', () => {
       expect(

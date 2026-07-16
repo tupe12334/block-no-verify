@@ -113,6 +113,26 @@ describe('checkCommand', () => {
       expect(result.blocked).toBe(true)
       expect(result.gitCommand).toBe('push')
     })
+
+    it('should block git config core.hooksPath <value> even though "config" is not a --no-verify-capable sub-command', () => {
+      const result = checkCommand('git config core.hooksPath /tmp/empty')
+      expect(result.blocked).toBe(true)
+      expect(result.gitCommand).toBeUndefined()
+      expect(result.reason).toContain('BLOCKED')
+      expect(result.reason).toContain('core.hooksPath')
+    })
+
+    it('should block git config --global core.hooksPath <value>', () => {
+      const result = checkCommand(
+        'git config --global core.hooksPath /dev/null'
+      )
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should allow a bare read of git config core.hooksPath', () => {
+      const result = checkCommand('git config core.hooksPath')
+      expect(result.blocked).toBe(false)
+    })
   })
 
   describe('blocking HUSKY=0 override', () => {
