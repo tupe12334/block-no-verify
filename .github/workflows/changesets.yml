@@ -1,0 +1,24 @@
+name: Changesets
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  changeset-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - '**'
+              - '!.changeset/**'
+              - '!.github/**'
+            changeset:
+              - '.changeset/*.md'
+      - name: Require changeset
+        if: steps.changes.outputs.src == 'true' && steps.changes.outputs.changeset == 'false'
+        run: |
+          echo '::error::Source files changed but no .changeset/*.md file was added. Run `npx changeset add` (or `npx changeset add --empty` if the change needs no release note).'
+          exit 1
