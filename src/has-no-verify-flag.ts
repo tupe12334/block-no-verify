@@ -1,36 +1,16 @@
 import { parse } from 'shell-quote'
-import { detectGitCommand } from './detect-git-command.js'
 import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
 import type { GitCommand } from './git-command.js'
+import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
+
+type ParseToken = ReturnType<typeof parse>[number]
 
 /**
- * Statement-separator characters that end the current shell command.
- * Duplicated (in miniature) from `find-git-subcommand.ts` because splitting
- * into statements is needed here for an independent reason: scoping flag
- * detection to the statement that actually invokes `command`, not locating a
- * sub-command.
+ * Shell control operators that end the current statement. Redirection
+ * operators (`>`, `<`, `>>`, …) are deliberately absent: they do not start a
+ * new command, so their operands stay with the statement being scanned.
  */
-const STATEMENT_SEPARATORS = ['\n', ';', '&', '|']
-
-/**
- * Splits `input` into top-level shell statements on `STATEMENT_SEPARATORS`.
- * Like the rest of this module's statement handling, this is a raw-text
- * split and does not account for a separator character appearing inside a
- * quoted string.
- * @param input - The full command string.
- * @returns The input split into statement substrings.
- */
-function splitStatements(input: string): string[] {
-  const statements: string[] = []
-  let start = 0
-  for (let i = 0; i < input.length; i++) {
-    if (!STATEMENT_SEPARATORS.includes(input.charAt(i))) continue
-    statements.push(input.slice(start, i))
-    start = i + 1
-  }
-  statements.push(input.slice(start))
-  return statements
-}
+const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
 /**
  * Options that consume the following argv token as their value (a commit
@@ -59,6 +39,45 @@ const SHORT_VALUE_LETTERS = new Set(['m', 'F', 'C', 'c'])
 
 /** The short-flag letter that enables `--no-verify` for `git commit`. */
 const NO_VERIFY_LETTERS = new Set(['n'])
+
+/**
+ * Splits a parsed token stream into statements at control operators. The
+ * split happens on `shell-quote`'s operator tokens rather than on raw
+ * characters, so a `;`, `|`, or `&` inside a quoted string (e.g. a commit
+ * message) never breaks the statement that carries it. Non-string tokens
+ * (operators, globs, comments) are dropped from the statements themselves.
+ * Unquoted newlines are whitespace to `shell-quote`, so newline-separated
+ * commands land in one statement — that can only over-scan (a safe
+ * false-positive direction), never hide a flag.
+ * @param tokens - The parsed token stream for the full input.
+ * @returns The statements, each an array of string argv tokens.
+ */
+function splitStatements(tokens: ParseToken[]): string[][] {
+  const statements: string[][] = [[]]
+  for (const token of tokens) {
+    if (typeof token === 'string') {
+      statements[statements.length - 1].push(token)
+      continue
+    }
+    if ('op' in token && CONTROL_OPERATORS.has(token.op)) {
+      statements.push([])
+    }
+  }
+  return statements
+}
+
+/**
+ * Returns true when the token is the `git` program itself, tolerating a path
+ * prefix (`/usr/bin/git`, `..\git.exe`) and the Windows `.exe` suffix.
+ * @param token - The argv token to inspect.
+ * @returns True when the token invokes git.
+ */
+function isGitToken(token: string): boolean {
+  const base = token.slice(
+    Math.max(token.lastIndexOf('/'), token.lastIndexOf('\\')) + 1
+  )
+  return base === 'git' || base.toLowerCase() === 'git.exe'
+}
 
 /**
  * Returns true when the token is an unambiguous git abbreviation of
@@ -96,27 +115,23 @@ function isShortNoVerifyBundle(token: string): boolean {
 }
 
 /**
- * Scans a single shell statement's own tokens for a --no-verify bypass of
- * `command`. Tokenization honors shell quoting (via `shell-quote`), and the
- * value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
+ * Scans one statement's argv tokens for a --no-verify bypass of `command`.
+ * The value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
  * `--no-verify` or `-n` appearing inside a commit message body is not
  * mistaken for the flag. A flag in argv flag-position (including a quoted
  * `git commit "--no-verify"`, which git still parses as the flag) is still
  * detected.
- * @param statement - A single shell statement (no top-level `;`/`&`/`|`).
+ * @param statement - The statement's string argv tokens.
  * @param command - The detected git sub-command.
  * @returns True when the statement contains a flag that bypasses hooks.
  */
-function hasNoVerifyFlagInStatement(
-  statement: string,
+function statementHasNoVerifyFlag(
+  statement: string[],
   command: GitCommand
 ): boolean {
-  const tokens = parse(statement).filter(
-    (token): token is string => typeof token === 'string'
-  )
   let skipNext = false
 
-  for (const token of tokens) {
+  for (const token of statement) {
     if (skipNext) {
       skipNext = false
       continue
@@ -144,28 +159,55 @@ function hasNoVerifyFlagInStatement(
 }
 
 /**
+ * Returns the guarded git sub-command a statement invokes, or null when the
+ * statement does not invoke git or none of its words is a guarded
+ * sub-command. When several guarded words appear, `commit` wins so that the
+ * stricter `-n` rule applies — over-matching can only widen the scan.
+ * @param statement - The statement's string argv tokens.
+ * @returns The statement's guarded sub-command, or null.
+ */
+function statementCommand(statement: string[]): GitCommand | null {
+  if (!statement.some(isGitToken)) return null
+  // `commit` is first in the list, so it wins when several words appear.
+  for (const cmd of GIT_COMMANDS_WITH_NO_VERIFY) {
+    if (statement.includes(cmd)) return cmd
+  }
+  return null
+}
+
+/**
  * Checks if the input contains a --no-verify flag for a specific git command.
  *
- * `input` is split into top-level shell statements (on `;`, `&`, `|`, and
- * newlines) and each statement is scanned independently, scoped to
- * statements that themselves invoke `command` (via {@link detectGitCommand}).
- * This keeps a flag belonging to a different command in the same shell line
- * (e.g. `echo -n` or `grep -n` after a `;` or `&&`) from being mistaken for
- * git's own `-n`/`--no-verify` (#70), while still catching a bypass that
- * appears in a later statement of the same line (e.g.
- * `git commit -m "msg"; git commit --no-verify`).
+ * The input is tokenized once with `shell-quote` (after best-effort
+ * `NAME=value` variable expansion, so an assignment in one statement still
+ * resolves in a later one, e.g. `c=push; git $c --no-verify`) and split into
+ * statements at control-operator tokens (`;`, `&&`, `|`, …). Each statement
+ * that invokes a guarded git sub-command is scanned against *its own*
+ * sub-command, so a `-n` belonging to a chained `echo`, `grep`, or `head` is
+ * not mistaken for git's `--no-verify` (#70), while a real bypass in any
+ * git-invoking statement of the same line — even one for a different
+ * guarded sub-command than `command` (e.g. `git commit -m "x" && git push
+ * --no-verify`) — is still caught. Because the split works on parsed
+ * tokens, a separator character inside a quoted commit message cannot break
+ * the statement apart and smuggle the flag past the scan. When no statement
+ * resolves to a guarded sub-command (the detector saw `command` through a
+ * construct this token-level check cannot), every statement is scanned
+ * against `command` as before — erring toward blocking.
  * @param input - The command string to scan.
  * @param command - The detected git sub-command.
  * @returns True when the command string contains a flag that bypasses hooks.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  // Expand `NAME=value` refs across the whole input first (statements are
-  // split next), since a variable can be assigned in one statement and
-  // referenced in a later one (e.g. `c=push; git $c --no-verify`, #56).
-  const expanded = expandSimpleVariableRefs(input)
-  for (const statement of splitStatements(expanded)) {
-    if (detectGitCommand(statement) !== command) continue
-    if (hasNoVerifyFlagInStatement(statement, command)) return true
+  const statements = splitStatements(parse(expandSimpleVariableRefs(input)))
+  let anyGitStatement = false
+  for (const statement of statements) {
+    const cmd = statementCommand(statement)
+    if (cmd === null) continue
+    anyGitStatement = true
+    if (statementHasNoVerifyFlag(statement, cmd)) return true
   }
-  return false
+  if (anyGitStatement) return false
+  return statements.some(statement =>
+    statementHasNoVerifyFlag(statement, command)
+  )
 }
