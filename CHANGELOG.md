@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1
+
+### Patch Changes
+
+- b26a229: Block persistent `git config core.hooksPath` override used to bypass hooks (#64)
+- b26a229: Close 4 git hook bypass detection gaps (#57)
+- b26a229: Replace custom shell tokenizer with the `shell-quote` package (#59)
+- b26a229: Restore shell-quote tokenizer import in find-git-subcommand (#61)
+
 ## [1.3.0](https://github.com/tupe12334/block-no-verify/compare/v1.2.0...v1.3.0) (2026-06-18)
 
 ### Features
