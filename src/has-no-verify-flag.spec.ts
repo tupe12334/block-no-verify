@@ -215,13 +215,39 @@ describe('hasNoVerifyFlag', () => {
       expect(hasNoVerifyFlag('   \n\t ', 'commit')).toBe(false)
     })
 
-    it('does not crash or misbehave on shell operator tokens like ; or && (out of scope per #56)', () => {
+    it('does not crash or misbehave on shell operator tokens like ; or &&', () => {
       expect(
         hasNoVerifyFlag('git commit -m "test" && git push --no-verify', 'push')
       ).toBe(true)
       expect(hasNoVerifyFlag('git commit -m "test"; echo done', 'commit')).toBe(
         false
       )
+    })
+  })
+
+  describe('statement-scoped flags for a chained command (issue #70)', () => {
+    it('does not mistake echo -n after ; for git commit -n', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test"; echo -n "done: "', 'commit')
+      ).toBe(false)
+    })
+
+    it('does not mistake grep -n after && for git commit -n', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "test" && git log | grep -n TODO',
+          'commit'
+        )
+      ).toBe(false)
+    })
+
+    it('still detects a real --no-verify bypass in a later statement', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "test"; git commit --no-verify',
+          'commit'
+        )
+      ).toBe(true)
     })
   })
 })
