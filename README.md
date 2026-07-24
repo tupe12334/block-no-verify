@@ -1,18 +1,19 @@
 # block-no-verify
 
-A security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, and GitHub MCP tool calls that write through the GitHub API.
+A security tool that blocks ways AI agents can bypass local git hooks. It flags the `--no-verify` flag, `core.hooksPath` overrides, GitHub MCP tool calls that write through the GitHub API, and hook-manager disable env vars (Husky, Lefthook, Overcommit, pre-commit).
 
 Powered by [`@polyhook/sdk`](https://github.com/tupe12334/polyhook) — write the hook once, run it everywhere.
 
 ## Why?
 
-When using AI coding assistants like Claude Code, Cursor, Windsurf, Cline, or Amp, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. Agents can side-step those hooks in three common ways:
+When using AI coding assistants like Claude Code, Cursor, Windsurf, Cline, or Amp, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. Agents can side-step those hooks in several common ways:
 
 - passing `--no-verify` to a git command,
 - overriding `core.hooksPath` (e.g. `git -c core.hooksPath=/dev/null ...`),
-- calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely.
+- calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely,
+- setting a hook manager's own disable environment variable, e.g. `HUSKY=0`, `LEFTHOOK=0`, `OVERCOMMIT_DISABLE=1`, or a non-empty `SKIP=` (pre-commit framework).
 
-This package provides a CLI that blocks all three, working with any AI tool that supports command / tool-use hooks.
+This package provides a CLI that blocks all of these, working with any AI tool that supports command / tool-use hooks.
 
 ## Used By
 
@@ -181,6 +182,17 @@ The following GitHub MCP tools are blocked because they write through the GitHub
 - `mcp__github__update_pull_request_branch`
 
 Read-only GitHub MCP tools (e.g. `mcp__github__get_file_contents`, `mcp__github__list_pull_requests`) are not blocked.
+
+## Hook Manager Bypasses
+
+Some hook managers ship their own escape hatch, separate from `git --no-verify`. These are detected and blocked when present alongside a monitored git command:
+
+| Manager    | Bypass                 | Notes                                         |
+| ---------- | ---------------------- | --------------------------------------------- |
+| Husky      | `HUSKY=0`              | Disables all husky hooks                      |
+| Lefthook   | `LEFTHOOK=0`           | Disables all lefthook hooks                   |
+| Overcommit | `OVERCOMMIT_DISABLE=1` | Disables all overcommit hooks                 |
+| pre-commit | non-empty `SKIP=`      | Skips the named hook(s), or all with `SKIP=*` |
 
 ## Behavior
 
