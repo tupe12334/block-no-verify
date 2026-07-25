@@ -224,4 +224,27 @@ describe('hasNoVerifyFlag', () => {
       )
     })
   })
+
+  describe('flags belonging to a different chained command (issue #70)', () => {
+    it('should NOT match echo -n chained after a git commit with ;', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test"; echo -n done', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match grep -n chained after a git commit with &&', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test" && grep -n x f', 'commit')
+      ).toBe(false)
+    })
+
+    it('should still detect a real --no-verify bypass in a later statement', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "test"; git commit --no-verify',
+          'commit'
+        )
+      ).toBe(true)
+    })
+  })
 })
