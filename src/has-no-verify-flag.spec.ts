@@ -215,13 +215,54 @@ describe('hasNoVerifyFlag', () => {
       expect(hasNoVerifyFlag('   \n\t ', 'commit')).toBe(false)
     })
 
-    it('does not crash or misbehave on shell operator tokens like ; or && (out of scope per #56)', () => {
+    it('does not crash or misbehave on shell operator tokens like ; or &&', () => {
       expect(
         hasNoVerifyFlag('git commit -m "test" && git push --no-verify', 'push')
       ).toBe(true)
       expect(hasNoVerifyFlag('git commit -m "test"; echo done', 'commit')).toBe(
         false
       )
+    })
+  })
+
+  describe('statement-scoped flags from a chained command (issue #70)', () => {
+    it('should NOT match echo -n after a ; separator', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test"; echo -n done', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match grep -n after a && separator', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test" && grep -n x f', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match head -n after a ; separator', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test"; head -n 5 file.txt', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match tail -n after a ; separator', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test"; tail -n 5 file.txt', 'commit')
+      ).toBe(false)
+    })
+
+    it('should NOT match sort -n after a ; separator', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "test"; sort -n file.txt', 'commit')
+      ).toBe(false)
+    })
+
+    it('should still catch a real --no-verify bypass in a later statement', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "test"; git commit --no-verify',
+          'commit'
+        )
+      ).toBe(true)
     })
   })
 })

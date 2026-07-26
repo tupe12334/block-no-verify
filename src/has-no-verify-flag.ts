@@ -1,5 +1,8 @@
 import { parse } from 'shell-quote'
 import type { GitCommand } from './git-command.js'
+import { detectGitCommand } from './detect-git-command.js'
+import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
+import { findStatementEnd } from './find-statement-end.js'
 
 /**
  * Options that consume the following argv token as their value (a commit
@@ -65,24 +68,20 @@ function isShortNoVerifyBundle(token: string): boolean {
 }
 
 /**
- * Checks if the input contains a --no-verify flag for a specific git command.
- *
- * The command is tokenized into argv honoring shell quoting (via `shell-quote`),
- * and the value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
+ * Scans a single shell statement's tokens for a flag that bypasses git hooks.
+ * The value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
  * `--no-verify` or `-n` appearing inside a commit message body is not mistaken
  * for the flag. A flag in argv flag-position (including a quoted
  * `git commit "--no-verify"`, which git still parses as the flag) is still
- * detected. Shell operator tokens (`;`, `&&`, `|`, …) that `shell-quote` returns
- * as `{ op: ... }` objects are filtered out rather than inspected; whether they
- * should be treated as bypass-relevant boundaries is tracked separately (#56).
- * @param input - The command string to scan.
- * @param command - The detected git sub-command.
- * @returns True when the command string contains a flag that bypasses hooks.
+ * detected.
+ * @param tokens - The string tokens of one shell statement, in argv order.
+ * @param command - The detected git sub-command for this statement.
+ * @returns True when the statement's tokens contain a bypass flag.
  */
-export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  const tokens = parse(input).filter(
-    (token): token is string => typeof token === 'string'
-  )
+function statementHasNoVerifyFlag(
+  tokens: readonly string[],
+  command: GitCommand
+): boolean {
   let skipNext = false
 
   for (const token of tokens) {
@@ -107,6 +106,52 @@ export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
     if (command === 'commit' && isShortNoVerifyBundle(token)) {
       return true
     }
+  }
+
+  return false
+}
+
+/**
+ * Checks if the input contains a --no-verify flag for a specific git command.
+ *
+ * `input` is first expanded via {@link expandSimpleVariableRefs} (matching
+ * what `detectGitCommand` does internally), so a sub-command or the flag
+ * itself hidden behind a simple variable assigned in an earlier statement
+ * (e.g. `c=push; git $c --no-verify`) is still resolved. The expanded string
+ * is then split into top-level shell statements via {@link findStatementEnd}
+ * — the same statement-boundary primitive `find-git-subcommand.ts` uses to
+ * bound its own sub-command search (`;`, `&`, `|`, or a newline — this also
+ * covers `&&`/`||`, whose first character is
+ * one of those separators). Each statement is tokenized independently (via
+ * `shell-quote`, honoring quoting) and only scanned for a bypass flag when
+ * that statement is itself a `git <command>` invocation matching `command`.
+ * This keeps a flag that belongs to a *different* command in the same shell
+ * line — e.g. `echo -n`, `grep -n`, `head -n` after `;` or `&&` — from being
+ * mistaken for git's own `-n`/`--no-verify`, while a real bypass in a later
+ * statement (e.g. `git commit -m x; git commit --no-verify`) is still caught
+ * because every statement is scanned, not just the first.
+ * @param input - The command string to scan.
+ * @param command - The detected git sub-command.
+ * @returns True when the command string contains a flag that bypasses hooks.
+ */
+export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
+  const expanded = expandSimpleVariableRefs(input)
+  let start = 0
+
+  while (start < expanded.length) {
+    const end = findStatementEnd(expanded, start)
+    const statement = expanded.slice(start, end)
+
+    if (detectGitCommand(statement) === command) {
+      const tokens = parse(statement).filter(
+        (token): token is string => typeof token === 'string'
+      )
+      if (statementHasNoVerifyFlag(tokens, command)) {
+        return true
+      }
+    }
+
+    start = end + 1
   }
 
   return false
