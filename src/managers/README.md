@@ -9,5 +9,7 @@ like `--no-verify` or `core.hooksPath`, which live in `src/`).
 - `overcommit/` — detects the `OVERCOMMIT_DISABLE=1` environment override.
 - `pre-commit/` — detects a non-empty `SKIP=` environment override.
 
-To add a new tool, create a subfolder with its detector + spec, then wire the
-detector into `src/check-command.ts` and export it from `src/index.ts`.
+To add a new tool, create a subfolder with its detector + spec, then register
+the manager in `src/managers/managers.ts` — no change to `check-command.ts` is
+required, since it checks every registered manager generically via
+`detectManagerBypass`.
