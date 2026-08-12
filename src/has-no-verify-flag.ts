@@ -1,9 +1,8 @@
-import { parse } from 'shell-quote'
-import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
+import { tokenizeCommand } from './tokenize-command.js'
 import type { GitCommand } from './git-command.js'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 
-type ParseToken = ReturnType<typeof parse>[number]
+type ParseToken = ReturnType<typeof tokenizeCommand>[number]
 
 /**
  * Shell control operators that end the current statement. Redirection
@@ -178,12 +177,12 @@ function statementCommand(statement: string[]): GitCommand | null {
 /**
  * Checks if the input contains a --no-verify flag for a specific git command.
  *
- * The input is tokenized once with `shell-quote` (after best-effort
- * `NAME=value` variable expansion, so an assignment in one statement still
- * resolves in a later one, e.g. `c=push; git $c --no-verify`) and split into
- * statements at control-operator tokens (`;`, `&&`, `|`, …). Each statement
- * that invokes a guarded git sub-command is scanned against *its own*
- * sub-command, so a `-n` belonging to a chained `echo`, `grep`, or `head` is
+ * The input is normalized for ANSI-C/locale quoting and line continuations
+ * (#78), then tokenized once with `shell-quote` after best-effort
+ * `NAME=value` variable expansion (e.g. `c=push; git $c --no-verify`), and
+ * split into statements at control-operator tokens (`;`, `&&`, `|`, …).
+ * Each statement that invokes a guarded git sub-command is scanned against its
+ * own sub-command, so a `-n` belonging to a chained `echo`, `grep`, or `head` is
  * not mistaken for git's `--no-verify` (#70), while a real bypass in any
  * git-invoking statement of the same line — even one for a different
  * guarded sub-command than `command` (e.g. `git commit -m "x" && git push
@@ -198,7 +197,7 @@ function statementCommand(statement: string[]): GitCommand | null {
  * @returns True when the command string contains a flag that bypasses hooks.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  const statements = splitStatements(parse(expandSimpleVariableRefs(input)))
+  const statements = splitStatements(tokenizeCommand(input))
   let anyGitStatement = false
   for (const statement of statements) {
     const cmd = statementCommand(statement)

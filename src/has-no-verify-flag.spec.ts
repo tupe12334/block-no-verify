@@ -225,6 +225,42 @@ describe('hasNoVerifyFlag', () => {
     })
   })
 
+  describe('ANSI-C quoting and line continuations (issue #78)', () => {
+    it('detects --no-verify given as an ANSI-C quoted string', () => {
+      expect(
+        hasNoVerifyFlag("git commit -m 'x' $'--no-verify'", 'commit')
+      ).toBe(true)
+    })
+
+    it('detects the -n shorthand given as an ANSI-C quoted string', () => {
+      expect(hasNoVerifyFlag("git commit -m 'x' $'-n'", 'commit')).toBe(true)
+    })
+
+    it('detects --no-verify split by a line continuation inside a double-quoted word', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "x" "--no-ver\\\nify"', 'commit')
+      ).toBe(true)
+    })
+
+    it('keeps a line continuation inside a single-quoted word literal', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m "x" \'--no-ver\\\nify\'', 'commit')
+      ).toBe(false)
+    })
+
+    it('does not treat a message value split by a line continuation as a flag', () => {
+      expect(hasNoVerifyFlag('git commit -m \\\n"--no-verify"', 'commit')).toBe(
+        false
+      )
+    })
+
+    it("leaves a literal $' inside an unrelated double-quoted value alone", () => {
+      expect(hasNoVerifyFlag('git commit -m "costs $\'5"', 'commit')).toBe(
+        false
+      )
+    })
+  })
+
   describe('statement-scoped flags for a chained command (issue #70)', () => {
     it('does not mistake echo -n after ; for git commit -n', () => {
       expect(
