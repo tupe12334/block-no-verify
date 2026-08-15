@@ -333,4 +333,49 @@ describe('hasNoVerifyFlag', () => {
       ).toBe(true)
     })
   })
+
+  describe('command substitution nested inside double quotes (issue #81)', () => {
+    // `shell-quote` returns a command substitution written inside a quoted
+    // word as one opaque string token instead of descending into it, so
+    // neither the git token nor the flag matched and the guarded command ran
+    // with hooks skipped.
+    it('detects --no-verify inside a $(...) substitution nested in double quotes', () => {
+      expect(
+        hasNoVerifyFlag('echo "$(git commit --no-verify)"', 'commit')
+      ).toBe(true)
+    })
+
+    it('detects --no-verify inside a backtick substitution nested in double quotes', () => {
+      expect(hasNoVerifyFlag('echo "`git commit --no-verify`"', 'commit')).toBe(
+        true
+      )
+    })
+
+    it('detects -n inside a $(...) substitution nested in double quotes', () => {
+      expect(hasNoVerifyFlag('echo "$(git commit -n -m x)"', 'commit')).toBe(
+        true
+      )
+    })
+
+    it('detects a bypass in a substitution used as an assignment value', () => {
+      expect(hasNoVerifyFlag('OUT="$(git commit --no-verify)"', 'commit')).toBe(
+        true
+      )
+    })
+
+    it('detects a bypass on a different guarded command than the one passed in', () => {
+      expect(
+        hasNoVerifyFlag('echo "$(git push --no-verify origin main)"', 'commit')
+      ).toBe(true)
+    })
+
+    it('allows a legitimate substitution with no guarded sub-command inside it', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m "on $(git rev-parse --abbrev-ref HEAD)"',
+          'commit'
+        )
+      ).toBe(false)
+    })
+  })
 })

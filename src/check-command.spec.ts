@@ -344,4 +344,26 @@ describe('checkCommand', () => {
       })
     })
   })
+
+  describe('command substitution nested inside double quotes (issue #81)', () => {
+    it('should block --no-verify inside a $(...) substitution in double quotes', () => {
+      const result = checkCommand('echo "$(git commit --no-verify)"')
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block --no-verify inside a backtick substitution in double quotes', () => {
+      const result = checkCommand('echo "`git commit --no-verify`"')
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block -n inside a $(...) substitution in double quotes', () => {
+      const result = checkCommand('echo "$(git commit -n -m x)"')
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block a substitution used as an assignment value', () => {
+      const result = checkCommand('OUT="$(git commit --no-verify)"')
+      expect(result.blocked).toBe(true)
+    })
+  })
 })
