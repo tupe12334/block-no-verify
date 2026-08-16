@@ -44,6 +44,12 @@ jobs:
       - name: Check for unused code
         run: pnpm knip
 
+      - name: Check file line limits
+        if: matrix.node-version == 20
+        uses: tupe12334/linecheck@main
+        with:
+          paths: .
+
       - name: Build
         run: pnpm build
 

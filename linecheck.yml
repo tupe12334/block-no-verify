@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/tupe12334/linecheck/main/schema/linecheck.schema.json
+
+rules:
+  - pattern: "**/*.spec.ts"
+    warn: 300
+    warn_message: "Test file getting long — consider splitting into focused spec files"
+    error: 500
+    error_message: "Too large to review easily; split this spec file now"
+  - pattern: "**/*.ts"
+    warn: 200
+    warn_message: "Getting long — consider splitting into submodules"
+    error: 400
+    error_message: "Too large to review easily; split this file now"
+
+exclude:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/coverage/**"
+  - "pnpm-lock.yaml"
