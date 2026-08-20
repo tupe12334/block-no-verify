@@ -1,0 +1,122 @@
+name: Scheduled Release
+
+# Safeguard against merged fixes sitting un-released on `main` indefinitely.
+#
+# ci.yml's `publish` job only runs on a `v*` tag push, and nothing in this
+# repo automatically creates/pushes that tag after a version bump lands on
+# `main` (see #68: package.json was hand-bumped to 1.3.1 in #69, but no
+# `v1.3.1` tag was ever pushed, so npm stayed on 1.3.0 for weeks).
+#
+# This workflow runs on a schedule (not on `push`) specifically to avoid an
+# infinite loop: release-it's version-bump commit+push back to `main` would
+# itself trigger another `push` event if this were push-triggered.
+#
+# That same GITHUB_TOKEN behavior means this workflow's own tag push does NOT
+# trigger ci.yml's tag-gated `publish` job either — GitHub Actions
+# intentionally does not chain further workflow runs off of events produced
+# by the default GITHUB_TOKEN, precisely to prevent the loop described above.
+# So this workflow publishes to npm itself once release-it has bumped,
+# tagged, and pushed the version, instead of assuming ci.yml's `publish` job
+# will pick it up on a follow-up run that will never happen.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  scheduled-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for unreleased commits
+        id: check
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No git tags found; treating all history as unreleased."
+            echo "has_unreleased=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Last tag: $LAST_TAG"
+          UNRELEASED_COUNT=$(git log "${LAST_TAG}..HEAD" --oneline | wc -l | tr -d ' ')
+          if [ "$UNRELEASED_COUNT" -eq 0 ]; then
+            echo "No commits since $LAST_TAG. Nothing to release, skipping."
+            echo "has_unreleased=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Found $UNRELEASED_COUNT commit(s) since $LAST_TAG. Release needed."
+            echo "has_unreleased=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Everything below only runs when there is actually something to
+      # release, so this workflow is a cheap no-op on most scheduled runs.
+
+      - name: Install pnpm
+        if: steps.check.outputs.has_unreleased == 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        if: steps.check.outputs.has_unreleased == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.check.outputs.has_unreleased == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure git
+        if: steps.check.outputs.has_unreleased == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      # release-it's `hooks.before:init` (see .release-it.json) already runs
+      # `pnpm test --run` and `pnpm build` before doing anything else, so a
+      # broken build blocks the release here. `--ci` disables interactive
+      # prompts; the version bump comes from the conventionalcommits preset
+      # reading commits since the last tag.
+      - name: Release (auto-bump from Conventional Commits)
+        if: steps.check.outputs.has_unreleased == 'true'
+        run: npx release-it --ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # .release-it.json sets `npm.publish: false` — release-it only bumps,
+      # commits, tags, and pushes. Publishing is done here instead, both
+      # because the tag push above (using the default GITHUB_TOKEN) won't
+      # trigger ci.yml's tag-gated `publish` job, and so it can use the same
+      # OIDC trusted publishing (`npm publish --provenance`) that job uses.
+      - name: Check if should publish
+        id: version_check
+        if: steps.check.outputs.has_unreleased == 'true'
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Package: $PACKAGE_NAME@$CURRENT_VERSION"
+
+          if npm view "$PACKAGE_NAME" time --json 2>/dev/null | grep -q "\"$CURRENT_VERSION\""; then
+            echo "Version $CURRENT_VERSION was previously published, skipping"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version $CURRENT_VERSION never published, will publish"
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install latest npm (required for OIDC trusted publishing)
+        if: steps.version_check.outputs.should_publish == 'true'
+        run: npm install -g npm@latest
+
+      - name: Publish to npm
+        if: steps.version_check.outputs.should_publish == 'true'
+        run: npm publish --access public --provenance
