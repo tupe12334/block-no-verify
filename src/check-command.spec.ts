@@ -344,4 +344,55 @@ describe('checkCommand', () => {
       })
     })
   })
+
+  describe('backtick command substitution', () => {
+    // `shell-quote` has no notion of backticks and leaves them glued to the
+    // adjacent words, so neither the git token nor the flag matched and the
+    // command ran unguarded. The `$(...)` spelling was already caught, which
+    // made the gap easy to miss.
+    it('should block --no-verify inside backticks', () => {
+      const result = checkCommand('echo `git commit --no-verify`')
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should block -n inside backticks', () => {
+      const result = checkCommand('echo `git commit -n -m x`')
+      expect(result.blocked).toBe(true)
+    })
+
+    // Known limitation, pre-existing and independent of backticks: a command
+    // substitution nested INSIDE double quotes is returned by `shell-quote` as
+    // one opaque string token, so neither spelling is seen. The `$(…)` form
+    // behaves identically, which is why this is tracked separately rather than
+    // fixed here.
+    it('documents that substitution inside double quotes is not detected yet', () => {
+      expect(checkCommand('echo "`git commit --no-verify`"').blocked).toBe(
+        checkCommand('echo "$(git commit --no-verify)"').blocked
+      )
+    })
+
+    it('should block --no-verify inside backticks in a later statement', () => {
+      const result = checkCommand('git status && echo `git push --no-verify`')
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should still block the equivalent $(...) spelling', () => {
+      const result = checkCommand('echo $(git commit --no-verify)')
+      expect(result.blocked).toBe(true)
+    })
+
+    it('should allow a legitimate command substitution', () => {
+      const result = checkCommand(
+        'git commit -m "on `git rev-parse --abbrev-ref HEAD`"'
+      )
+      expect(result.blocked).toBe(false)
+    })
+
+    it('should allow backticks carrying an unrelated -n flag', () => {
+      const result = checkCommand(
+        'echo `head -n 5 file.txt` && git commit -m x'
+      )
+      expect(result.blocked).toBe(false)
+    })
+  })
 })

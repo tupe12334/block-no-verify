@@ -27,12 +27,42 @@ describe('normalizeShellQuoting', () => {
   })
 
   it('preserves an escaped double quote inside a double-quoted word', () => {
-    expect(normalizeShellQuoting('"say \\"hi\\""')).toBe('"say \\"hi\\""')
+    expect(normalizeShellQuoting(String.raw`"say \"hi\""`)).toBe(
+      String.raw`"say \"hi\""`
+    )
   })
 
   it('leaves input with no special constructs unchanged', () => {
     expect(normalizeShellQuoting('git commit -m "test" --no-verify')).toBe(
       'git commit -m "test" --no-verify'
     )
+  })
+
+  it('rewrites backtick command substitution to $(...)', () => {
+    expect(normalizeShellQuoting('echo `git commit --no-verify`')).toBe(
+      'echo $(git commit --no-verify)'
+    )
+  })
+
+  it('rewrites backtick command substitution inside double quotes', () => {
+    expect(normalizeShellQuoting('echo "`git commit --no-verify`"')).toBe(
+      'echo "$(git commit --no-verify)"'
+    )
+  })
+
+  it('leaves backticks inside a single-quoted word untouched', () => {
+    expect(normalizeShellQuoting("echo '`git commit --no-verify`'")).toBe(
+      "echo '`git commit --no-verify`'"
+    )
+  })
+
+  it('leaves a backslash-escaped backtick literal', () => {
+    expect(normalizeShellQuoting('echo \\`not a substitution\\`')).toBe(
+      'echo \\`not a substitution\\`'
+    )
+  })
+
+  it('rewrites an unterminated backtick to an opening $( ', () => {
+    expect(normalizeShellQuoting('echo `git commit')).toBe('echo $(git commit')
   })
 })
