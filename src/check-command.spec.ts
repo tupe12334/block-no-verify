@@ -239,6 +239,27 @@ describe('checkCommand', () => {
     })
   })
 
+  describe('issue #89: -n in another pipeline segment must not block the commit', () => {
+    it('allows a preceding bash -n before an unrelated git commit', () => {
+      const result = checkCommand(
+        'bash -n run.sh && git add x && git commit -q -m "msg"'
+      )
+      expect(result.blocked).toBe(false)
+    })
+
+    it('allows a trailing sort -n after the commit in the same pipeline', () => {
+      const result = checkCommand('git commit -q -m "m"; ls | sort -n')
+      expect(result.blocked).toBe(false)
+    })
+
+    it('allows a heredoc grep -n line ahead of the commit statement', () => {
+      const result = checkCommand(
+        'cat <<EOF\ngrep -n foo\nEOF\ngit commit -q -m "docs"'
+      )
+      expect(result.blocked).toBe(false)
+    })
+  })
+
   describe('issue #56: bypass detection gaps', () => {
     describe('group A: sub-command detection evasion via quotes/variables', () => {
       it('should block git "push" --no-verify (quoted sub-command)', () => {
