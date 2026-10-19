@@ -5,7 +5,7 @@ import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
 import { detectManagerBypass } from './managers/index.js'
-import { maskQuotedText } from './mask-quoted-text.js'
+import { maskMessageValues } from './mask-message-values.js'
 import { issuesUrl } from './package-info.js'
 
 /**
@@ -44,10 +44,10 @@ export function checkCommand(
   // Checked before the `!gitCommand` early return: a bare `git config
   // core.hooksPath <value>` persistently redirects hooks without going
   // through a sub-command (e.g. commit/push) that supports --no-verify.
-  // Env and config checks are regex-based, so they scan the input with quoted
-  // free text masked: override-looking text in a commit message is not a
+  // Env and config checks are regex-based, so they scan the input with commit
+  // and PR message values masked: override-looking text in a message is not a
   // bypass (#93).
-  const scanText = maskQuotedText(input)
+  const scanText = maskMessageValues(input)
 
   if (hasHooksPathOverride(scanText)) {
     return {
