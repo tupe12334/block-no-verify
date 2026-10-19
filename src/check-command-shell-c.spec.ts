@@ -15,6 +15,10 @@ describe('checkCommand: sh/bash -c command strings', () => {
     'sh -c -- "git commit --no-verify -m x"',
     'bash -c -x "git commit --no-verify -m x"',
     'bash -c +e "git push --no-verify"',
+    // Other shells run their -c operand too.
+    'ash -c "git commit --no-verify -m x"',
+    'fish -c "git commit --no-verify -m x"',
+    '/bin/tcsh -c "git commit --no-verify -m x"',
     // eval and env -S run their operand as a command line.
     'eval "git commit --no-verify -m x"',
     'eval git commit --no-verify -m x',
