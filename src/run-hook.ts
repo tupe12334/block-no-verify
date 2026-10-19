@@ -41,6 +41,29 @@ function isToolCall(event: HookEvent): boolean {
 }
 
 /**
+ * Runs `checkCommand`, blocking when it throws. An uncaught error would exit
+ * with a non-blocking code and let the command run, while bash may still run
+ * it: an unterminated `${` inside `$( )` fails only that substitution (#97).
+ * @param command - The command input to check.
+ * @param options - Optional context such as the invoked tool name.
+ * @returns The check result, or a block when the command cannot be checked.
+ */
+function checkFailClosed(
+  command: string,
+  options: Parameters<typeof checkCommand>[1]
+): CheckResult {
+  try {
+    return checkCommand(command, options)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    return {
+      blocked: true,
+      reason: `BLOCKED: block-no-verify could not parse this command (${detail}), so it cannot confirm that git hooks are not bypassed. Rewrite the command so the shell syntax is complete.`,
+    }
+  }
+}
+
+/**
  * Runs the hook logic for a polyhook event.
  * @param event - The hook event received from the AI agent runtime.
  * @param sdk - The SDK helpers used to approve or block the tool call.
@@ -65,7 +88,7 @@ export async function runHook(
   const command = typeof rawCommand === 'string' ? rawCommand : ''
 
   const options = toolName !== undefined ? { toolName } : undefined
-  const result = checkCommand(command, options)
+  const result = checkFailClosed(command, options)
 
   if (result.blocked) {
     const reason = result.reason !== undefined ? result.reason : ''
