@@ -6,6 +6,8 @@ import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
 import { detectManagerBypass } from './managers/index.js'
 import { maskMessageValues } from './mask-message-values.js'
+import { findAliasCommands } from './find-alias-commands.js'
+import { findUnknownSubcommandBypass } from './find-unknown-subcommand-bypass.js'
 import { issuesUrl } from './package-info.js'
 
 /**
@@ -54,6 +56,29 @@ export function checkCommand(
       blocked: true,
       reason: `BLOCKED: Overriding core.hooksPath is not allowed${gitCommand === undefined ? '' : ` with git ${gitCommand}`}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       gitCommand,
+    }
+  }
+
+  // A git alias runs its value when invoked, so check what each alias
+  // defined here would run (#91).
+  for (const aliasCommand of findAliasCommands(input)) {
+    const aliasResult = checkCommand(aliasCommand, options)
+    if (aliasResult.blocked) {
+      return {
+        blocked: true,
+        reason: `BLOCKED: A git alias defined in this command runs a hook bypass. ${aliasResult.reason === undefined ? '' : aliasResult.reason}`,
+        gitCommand: aliasResult.gitCommand,
+      }
+    }
+  }
+
+  // A sub-command that is not a git built-in may be an alias defined
+  // elsewhere, so `--no-verify` after it is blocked too.
+  const unknownSubcommand = findUnknownSubcommandBypass(input)
+  if (unknownSubcommand !== null) {
+    return {
+      blocked: true,
+      reason: `BLOCKED: --no-verify is not allowed with git ${unknownSubcommand}, which may be an alias for a guarded command. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
     }
   }
 
