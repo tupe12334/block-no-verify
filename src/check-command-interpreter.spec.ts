@@ -25,6 +25,13 @@ describe('checkCommand: interpreter code strings', () => {
     // Code attached to its option.
     `python3 -c"import os; os.system('git commit --no-verify -m x')"`,
     `perl -e'system("git commit --no-verify -m x")'`,
+    // Perl and Ruby quote operators, and awk programs.
+    `perl -e 'system qq{git push --no-verify}'`,
+    `perl -e 'qx{git commit --no-verify -m x}'`,
+    `ruby -e 'system %q(git push --no-verify)'`,
+    `ruby -e '%x(git push --no-verify)'`,
+    `awk 'BEGIN{system("git push --no-verify")}'`,
+    `gawk -F: 'BEGIN{system("git commit --no-verify -m x")}' /etc/passwd`,
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })
@@ -33,6 +40,8 @@ describe('checkCommand: interpreter code strings', () => {
     `python3 -c "print('hello')"`,
     `python3 -c "import os; os.system('git status')"`,
     `node -e "console.log('a b')"`,
+    "awk -F: '{print $1}' /etc/passwd",
+    "perl -e 'my $q = 1; print qq{hi}'",
     'python3 script.py --no-verify',
   ])('allows %s', command => {
     expect(checkCommand(command).blocked).toBe(false)

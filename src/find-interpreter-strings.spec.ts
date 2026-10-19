@@ -11,6 +11,11 @@ describe('findInterpreterStrings', () => {
     ],
     [`/usr/bin/python3.12 -c "print('a', \\"b\\")"`, ['a', 'b', 'a b']],
     [`ruby -e 'system "git fetch"'`, ['git fetch']],
+    [`perl -e 'system qq{git push}'`, ['git push']],
+    [`ruby -e '%x(git log)'`, ['git log']],
+    [`awk 'BEGIN{system("git push")}'`, ['git push']],
+    [`gawk -F: -v x=1 'BEGIN{system("git log")}' f`, ['git log']],
+    [`awk -F , '{print "a"}' f`, ['a']],
   ])('reads %s', (input, literals) => {
     expect(findInterpreterStrings(input)).toEqual(literals)
   })
