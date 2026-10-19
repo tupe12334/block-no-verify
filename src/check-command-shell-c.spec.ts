@@ -24,6 +24,11 @@ describe('checkCommand: sh/bash -c command strings', () => {
     'nu -c "git commit --no-verify -m x"',
     'pwsh -Command "git commit --no-verify -m x"',
     'yash -c "git commit --no-verify -m x"',
+    // su -c, and scripts fed to a shell on stdin.
+    'su -c "git commit --no-verify -m x" me',
+    "echo 'git commit --no-verify -m x' | sh",
+    "printf 'git push --no-verify' | bash",
+    "sh <<< 'git commit --no-verify -m x'",
     // eval and env -S run their operand as a command line.
     'eval "git commit --no-verify -m x"',
     'eval git commit --no-verify -m x',
