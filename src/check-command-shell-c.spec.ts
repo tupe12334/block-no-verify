@@ -15,6 +15,11 @@ describe('checkCommand: sh/bash -c command strings', () => {
     'sh -c -- "git commit --no-verify -m x"',
     'bash -c -x "git commit --no-verify -m x"',
     'bash -c +e "git push --no-verify"',
+    // eval and env -S run their operand as a command line.
+    'eval "git commit --no-verify -m x"',
+    'eval git commit --no-verify -m x',
+    'env -S "git commit --no-verify -m x"',
+    'env --split-string="git push --no-verify"',
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })
@@ -24,6 +29,9 @@ describe('checkCommand: sh/bash -c command strings', () => {
     "sh -c 'npm test && git push'",
     'bash -c "echo --no-verify"',
     'bash script.sh --no-verify',
+    'eval "$(ssh-agent -s)"',
+    'env -S "git status"',
+    'echo eval',
   ])('allows %s', command => {
     expect(checkCommand(command).blocked).toBe(false)
   })
