@@ -1,14 +1,9 @@
-import { stringLiterals } from './string-literals.js'
+import { codeLiterals } from './code-literals.js'
+import { isInterpreter } from './is-interpreter.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Shell control operators that end a statement. */
 const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
-
-/** Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php, lua. */
-const INTERPRETER = /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua)$/
-
-/** Languages with `q{}` / `%q()` quote operators. */
-const QUOTE_OPERATOR_LANGUAGES = new Set(['perl', 'ruby'])
 
 /** Long options whose value is code (`node --eval`, `node --print`). */
 const LONG_CODE_OPTIONS = new Set(['--eval', '--print'])
@@ -36,14 +31,7 @@ const DENO_EVAL = new Set(['eval'])
 export function findInterpreterStrings(input: string): string[] {
   const literals: string[] = []
   const addCode = (code: string): void => {
-    const found = stringLiterals(
-      code,
-      QUOTE_OPERATOR_LANGUAGES.has(interpreter)
-    )
-    literals.push(...found)
-    // An argv list (`run(["git", "commit", …])`) splits a command across
-    // literals, so the joined literals are checked as one command too.
-    if (found.length > 1) literals.push(found.join(' '))
+    literals.push(...codeLiterals(code, interpreter))
   }
   let afterInterpreter = false
   let codeIsNext = false
@@ -66,7 +54,7 @@ export function findInterpreterStrings(input: string): string[] {
       addCode(token)
       codeIsNext = false
       afterInterpreter = false
-    } else if (INTERPRETER.test(token.slice(token.lastIndexOf('/') + 1))) {
+    } else if (isInterpreter(token.slice(token.lastIndexOf('/') + 1))) {
       afterInterpreter = true
       interpreter = token.slice(token.lastIndexOf('/') + 1)
     } else if (!afterInterpreter) {
