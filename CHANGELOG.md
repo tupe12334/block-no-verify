@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.4
+
+### Patch Changes
+
+- 6da9280: Block, instead of crashing, when a command cannot be parsed (#97). An unterminated `${` made the shell tokenizer throw, and the CLI exited 1, which agents treat as non-blocking, so `git commit --no-verify -m x $(echo ${)` ran past the hooks. The hook now blocks any command it cannot check.
+- 32012a4: Stop blocking commands whose commit or PR message only mentions an override (#93). The hooks-path and hook-manager env checks (`HUSKY`, `LEFTHOOK`, `SKIP`, `OVERCOMMIT_DISABLE`, `core.hooksPath`, …) now ignore the values of `-m`, `--message`, `--title`, `--body` and `--notes`. Shell payloads such as `bash -c "…"` and messages that contain a command substitution are still scanned. Also block `git "-c" "core.hooksPath=…"`, which the quoted `-c` let through before.
+
 ## 1.3.3
 
 ### Patch Changes
