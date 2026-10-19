@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.7
+
+### Patch Changes
+
+- 70a4321: Block hook bypasses run through `eval` or `env -S` (#101). `eval "git commit --no-verify -m x"` and `env -S "git commit --no-verify"` were allowed. The command line that `eval` builds from its arguments, and the value of `env -S` / `--split-string`, are now checked like typed commands.
+- 3a0eadb: README: list the alias and shell-string bypasses, letter-case-insensitive `core.hooksPath`, and that commands it cannot parse are blocked.
+
 ## 1.3.6
 
 ### Patch Changes
