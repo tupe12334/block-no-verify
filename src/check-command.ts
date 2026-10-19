@@ -8,6 +8,7 @@ import { detectManagerBypass } from './managers/index.js'
 import { maskMessageValues } from './mask-message-values.js'
 import { findAliasCommands } from './find-alias-commands.js'
 import { findShellScripts } from './find-shell-scripts.js'
+import { findFedScripts } from './find-fed-scripts.js'
 import { findUnknownSubcommandBypass } from './find-unknown-subcommand-bypass.js'
 import { issuesUrl } from './package-info.js'
 
@@ -74,7 +75,7 @@ export function checkCommand(
   }
 
   // `sh -c "…"` runs its operand as a command, so check it as one (#101).
-  for (const script of findShellScripts(input)) {
+  for (const script of [...findShellScripts(input), ...findFedScripts(input)]) {
     const scriptResult = checkCommand(script, options)
     if (scriptResult.blocked) {
       return {

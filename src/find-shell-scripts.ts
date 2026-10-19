@@ -4,7 +4,7 @@ import { tokenizeCommand } from './tokenize-command.js'
 /** Shells whose `-c` operand is a command string they run (#101). */
 const SHELLS = new Set(
   // cspell:disable-next-line
-  'sh bash zsh dash ksh ash mksh fish csh tcsh yash posh rc nu elvish xonsh pwsh powershell'.split(
+  'sh bash zsh dash ksh ash mksh fish csh tcsh yash posh rc nu elvish xonsh pwsh powershell su'.split(
     ' '
   )
 )
