@@ -33,7 +33,9 @@ function hasUnquotedNewline(input: string): boolean {
  * - a heredoc (`<<`), whose body the tokenizer reads as shell words;
  * - a `#`, since a comment hides the rest of the input from the tokenizer;
  * - `alias`, since a git or gh alias can run a message value in a shell
- *   (`git -c alias.x='!sh -c' x -m "…"`).
+ *   (`git -c alias.x='!sh -c' x -m "…"`);
+ * - ANSI-C or locale quoting (`$'…'`, `$"…"`), where a backslash can escape
+ *   the quote and mislead the newline tracker below.
  * @param input - The raw command string.
  * @returns True when masking cannot hide a statement from the scan.
  */
@@ -41,6 +43,8 @@ export function canMaskMessageValues(input: string): boolean {
   return (
     !input.includes('<<') &&
     !input.includes('#') &&
+    !input.includes("$'") &&
+    !input.includes('$"') &&
     !/alias/i.test(input) &&
     !hasUnquotedNewline(input)
   )

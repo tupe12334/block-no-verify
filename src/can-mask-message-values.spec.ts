@@ -18,6 +18,8 @@ describe('canMaskMessageValues', () => {
     'git commit -m x # note',
     'git -c alias.x=\'!sh -c\' x -m "y"',
     'gh alias set x \'!sh -c\' && gh x --body "y"',
+    "git commit -m $'x\\''\nparallel -m \"y\" ::: a",
+    'git commit -m $"x"',
   ])('skips masking for %j', input => {
     expect(canMaskMessageValues(input)).toBe(false)
   })
