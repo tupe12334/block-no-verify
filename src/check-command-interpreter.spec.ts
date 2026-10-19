@@ -25,6 +25,26 @@ describe('checkCommand: interpreter code strings', () => {
     // Code attached to its option.
     `python3 -c"import os; os.system('git commit --no-verify -m x')"`,
     `perl -e'system("git commit --no-verify -m x")'`,
+    // Perl and Ruby quote operators, and awk programs.
+    `perl -e 'system qq{git push --no-verify}'`,
+    `perl -e 'qx{git commit --no-verify -m x}'`,
+    `ruby -e 'system %q(git push --no-verify)'`,
+    `ruby -e '%x(git push --no-verify)'`,
+    `awk 'BEGIN{system("git push --no-verify")}'`,
+    `gawk -F: 'BEGIN{system("git commit --no-verify -m x")}' /etc/passwd`,
+    // Code that only looks like a quote operator, and more awk options.
+    `perl -e '$r=$a%$b; system "git commit -m x --no-verify"'`,
+    `perl -e 'print 7%-3; system "git commit -m x --no-verify"'`,
+    `perl -e '%$h; system "git commit -m x --no-verify"'`,
+    `ruby -e 'x=7%-3; system "git commit -m x --no-verify"'`,
+    `python3 -c 'x=a%-1; import os; os.system("git commit -m x --no-verify")'`,
+    `python3 -c 'q-1; import os; os.system("git commit -m x --no-verify")'`,
+    `node -e 'const q=x; q?.a; require("child_process").execSync("git commit -m x --no-verify")'`,
+    `awk -vname=1 'BEGIN{system("git commit -m x --no-verify")}'`,
+    `gawk --source='BEGIN{system("git commit -m x --no-verify")}'`,
+    `gawk -i inplace 'BEGIN{system("git commit -m x --no-verify")}' f`,
+    `awk --assign x=1 'BEGIN{system("git commit -m x --no-verify")}'`,
+    `awk '{x=$1%$2; system("git commit -m x --no-verify")}'`,
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })
@@ -33,6 +53,8 @@ describe('checkCommand: interpreter code strings', () => {
     `python3 -c "print('hello')"`,
     `python3 -c "import os; os.system('git status')"`,
     `node -e "console.log('a b')"`,
+    "awk -F: '{print $1}' /etc/passwd",
+    "perl -e 'my $q = 1; print qq{hi}'",
     'python3 script.py --no-verify',
   ])('allows %s', command => {
     expect(checkCommand(command).blocked).toBe(false)

@@ -1,3 +1,4 @@
+import { stringLiterals } from './string-literals.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Shell control operators that end a statement. */
@@ -5,6 +6,9 @@ const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
 /** Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php, lua. */
 const INTERPRETER = /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua)$/
+
+/** Languages with `q{}` / `%q()` quote operators. */
+const QUOTE_OPERATOR_LANGUAGES = new Set(['perl', 'ruby'])
 
 /** Long options whose value is code (`node --eval`, `node --print`). */
 const LONG_CODE_OPTIONS = new Set(['--eval', '--print'])
@@ -22,39 +26,6 @@ const PHP_CODE_OPTION = new Set(['-r'])
 const DENO_EVAL = new Set(['eval'])
 
 /**
- * Returns the string literals in a piece of interpreter code. A git command
- * run from code sits in one (`os.system('git commit …')`), so each literal
- * is a candidate command. Backslash escapes inside a literal are kept.
- * @param code - The interpreter code.
- * @returns The literals' contents, in order.
- */
-function stringLiterals(code: string): string[] {
-  const literals: string[] = []
-  let quote: string | null = null
-  let current = ''
-  let escaped = false
-  for (const char of code) {
-    if (quote === null) {
-      if (char === '"' || char === "'" || char === '`') {
-        quote = char
-        current = ''
-      }
-    } else if (escaped) {
-      current += char
-      escaped = false
-    } else if (char === '\\') {
-      escaped = true
-    } else if (char === quote) {
-      literals.push(current)
-      quote = null
-    } else {
-      current += char
-    }
-  }
-  return literals
-}
-
-/**
  * Returns the string literals inside code passed to an interpreter on the
  * command line (`python3 -c "…"`, `perl -e '…'`, `node -e "…"`), so the
  * caller can check each like a typed command (#101). A literal that is not a
@@ -65,7 +36,10 @@ function stringLiterals(code: string): string[] {
 export function findInterpreterStrings(input: string): string[] {
   const literals: string[] = []
   const addCode = (code: string): void => {
-    const found = stringLiterals(code)
+    const found = stringLiterals(
+      code,
+      QUOTE_OPERATOR_LANGUAGES.has(interpreter)
+    )
     literals.push(...found)
     // An argv list (`run(["git", "commit", …])`) splits a command across
     // literals, so the joined literals are checked as one command too.
