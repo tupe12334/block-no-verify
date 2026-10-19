@@ -55,4 +55,10 @@ describe('maskMessageValues', () => {
       'git commit -m _ && parallel -m c d'
     )
   })
+
+  it('returns the raw input when the tokenizer throws', () => {
+    expect(maskMessageValues('git commit -m "a b" $(echo ${)')).toBe(
+      'git commit -m "a b" $(echo ${)'
+    )
+  })
 })

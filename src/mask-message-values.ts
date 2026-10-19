@@ -87,10 +87,18 @@ const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
  */
 export function maskMessageValues(input: string): string {
   if (!canMaskMessageValues(input)) return input
+  let tokens: ReturnType<typeof tokenizeCommand>
+  try {
+    tokens = tokenizeCommand(input)
+  } catch {
+    // `shell-quote` throws on input such as an unterminated `${`. Scan the raw
+    // input instead: a crash here would exit non-blocking and let it run.
+    return input
+  }
   const words: string[] = []
   let previous: string | undefined
   let program: string | undefined
-  for (const token of tokenizeCommand(input)) {
+  for (const token of tokens) {
     if (typeof token === 'string') {
       const isProgramWord = program === undefined && !ENV_ASSIGNMENT.test(token)
       if (isProgramWord) program = token

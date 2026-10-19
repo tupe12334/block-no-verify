@@ -40,6 +40,9 @@ describe('checkCommand: override text inside message values (#93)', () => {
       // A newline is not a statement boundary to the tokenizer.
       'git commit -m x\nparallel -m "git -c core.hooksPath=/dev/null commit" ::: a',
       'git commit -m x # c\nparallel -m "git -c core.hooksPath=/dev/null commit" ::: a',
+      // Input the tokenizer cannot parse is scanned raw, not crashed on.
+      'git -c core.hooksPath=/dev/null commit -m x `echo ${`',
+      'git -c core.hooksPath=/dev/null commit -m x $(echo ${)',
       // ANSI-C quoting can hide a newline from the quote tracker.
       `git commit -m $'x\\''\nparallel -m "git -c core.hooksPath=/dev/null commit -m x" ::: a`,
       // An alias can run the message value in a shell.
