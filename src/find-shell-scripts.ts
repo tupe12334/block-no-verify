@@ -1,3 +1,4 @@
+import { readSplitStringOption } from './read-split-string-option.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Shells whose `-c` operand is a command string they run. */
@@ -6,82 +7,93 @@ const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh'])
 /** `eval` joins its arguments and runs them as a command line. */
 const EVAL = new Set(['eval'])
 
+/** `env` runs the value of its split-string option as a command line. */
+const ENV = new Set(['env'])
+
 /** Shell control operators that end a statement. */
 const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
 /** Matches a short-option bundle that includes `c`: `-c`, `-lc`, `-ec`. */
 const C_OPTION = /^-[a-z]*c[a-z]*$/
 
+/** An env assignment word inside a split string (`A=1`). */
+const ENV_ASSIGNMENT = /^[A-Za-z_]\w*=/
+
 /**
- * Returns true when the word names a shell, with an optional path prefix.
+ * Returns the program name of a word, without any path prefix.
  * @param word - An argv word.
- * @returns True when the word is sh, bash, zsh, dash or ksh.
+ * @returns The base name, e.g. `env` for `/usr/bin/env`.
  */
-function isShell(word: string): boolean {
-  return SHELLS.has(word.slice(word.lastIndexOf('/') + 1))
+function baseName(word: string): string {
+  return word.slice(word.lastIndexOf('/') + 1)
+}
+
+/**
+ * Turns an env split string into the command it runs: `\_` is a space to
+ * env, and leading env options or assignments are not part of the command.
+ * @param value - The split-string value.
+ * @returns The command line.
+ */
+function envCommand(value: string): string {
+  const words = value.replace(/\\_/g, ' ').trim().split(/\s+/)
+  const start = words.findIndex(
+    word => !word.startsWith('-') && !ENV_ASSIGNMENT.test(word)
+  )
+  return start === -1 ? '' : words.slice(start).join(' ')
 }
 
 /**
  * Returns the command strings that `sh -c`, `bash -c` (and `-lc`, `-ec`, …),
- * `eval` and `env -S` calls in the input would run, so the caller can check them like typed
- * commands (#101). A shell word anywhere in a statement counts (`sudo bash
- * -c`, `env sh -c`), which can only widen the scan. Option words between
- * `-c` and the script (`sh -c -- "…"`, `bash -c -x "…"`) are skipped, since
- * the shell takes the first non-option word as the script.
+ * `eval` and `env -S` calls in the input would run, so the caller can check
+ * them like typed commands (#101). A shell or env word anywhere in a
+ * statement counts (`sudo bash -c`, `/usr/bin/env -S`), which can only widen
+ * the scan. Option words between `-c` and the script are skipped, since the
+ * shell takes the first non-option word as the script.
  * @param input - The raw command string.
- * @returns The `-c` operands, in input order.
+ * @returns The command strings, in input order.
  */
 export function findShellScripts(input: string): string[] {
   const scripts: string[] = []
-  let afterShell = false
-  let scriptIsNext = false
-  // `eval` joins all its arguments with spaces and runs the result.
+  let after: 'shell' | 'env' | null = null
+  let next: 'shell' | 'env' | null = null
   let evalWords: string[] | null = null
   const endStatement = (): void => {
     if (evalWords !== null && evalWords.length > 0) {
       scripts.push(evalWords.join(' '))
     }
     evalWords = null
-    afterShell = false
-    scriptIsNext = false
+    after = null
+    next = null
   }
   for (const token of tokenizeCommand(input)) {
     if (typeof token !== 'string') {
       if ('op' in token && CONTROL_OPERATORS.has(token.op)) endStatement()
       continue
     }
+    const splitString = after === 'env' ? readSplitStringOption(token) : null
     if (evalWords !== null) {
       evalWords.push(token)
-    } else if (
-      scriptIsNext &&
-      (token.startsWith('-') || token.startsWith('+'))
-    ) {
+    } else if (next === 'shell' && /^[-+]/.test(token)) {
       continue
-    } else if (scriptIsNext) {
-      scripts.push(token)
-      scriptIsNext = false
-      afterShell = false
+    } else if (next !== null) {
+      scripts.push(next === 'env' ? envCommand(token) : token)
+      next = null
+      after = null
     } else if (EVAL.has(token)) {
       evalWords = []
-    } else if (token.startsWith('--split-string=')) {
-      // `env --split-string=STRING` runs STRING as a command line.
-      scripts.push(token.slice('--split-string='.length))
-    } else if (isShell(token) || token === 'env') {
-      afterShell = true
-    } else if (afterShell && (C_OPTION.test(token) || isSplitString(token))) {
-      scriptIsNext = true
+    } else if (SHELLS.has(baseName(token))) {
+      after = 'shell'
+    } else if (ENV.has(baseName(token))) {
+      after = 'env'
+    } else if (after === 'shell' && C_OPTION.test(token)) {
+      next = 'shell'
+    } else if (splitString === undefined) {
+      next = 'env'
+    } else if (splitString !== null) {
+      scripts.push(envCommand(splitString))
+      after = null
     }
   }
   endStatement()
   return scripts
-}
-
-/**
- * Returns true for `env`'s split-string option (`-S`, `--split-string`),
- * whose value env splits into a command line and runs.
- * @param token - An argv word after `env`.
- * @returns True when the word is the split-string option.
- */
-function isSplitString(token: string): boolean {
-  return token === '-S' || token === '--split-string'
 }
