@@ -1,3 +1,4 @@
+import { canMaskMessageValues } from './can-mask-message-values.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Placeholder that keeps a masked value's position in the rebuilt string. */
@@ -78,11 +79,14 @@ const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
  * whose program is `git` or `gh`. Every other quoted string, such as a
  * `bash -c "…"` payload or text piped into `sh`, stays visible, because the
  * shell may run it. A message that contains a command substitution is not
- * masked either. A masked value keeps its position.
+ * masked either. A masked value keeps its position. When the tokenizer's
+ * statements might not match the shell's (see `canMaskMessageValues`), the
+ * input is returned unchanged.
  * @param input - The raw command string.
  * @returns The input with message values masked.
  */
 export function maskMessageValues(input: string): string {
+  if (!canMaskMessageValues(input)) return input
   const words: string[] = []
   let previous: string | undefined
   let program: string | undefined
