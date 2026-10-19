@@ -22,7 +22,9 @@ function isShell(word: string): boolean {
  * Returns the command strings that `sh -c`, `bash -c` (and `-lc`, `-ec`, …)
  * calls in the input would run, so the caller can check them like typed
  * commands (#101). A shell word anywhere in a statement counts (`sudo bash
- * -c`, `env sh -c`), which can only widen the scan.
+ * -c`, `env sh -c`), which can only widen the scan. Option words between
+ * `-c` and the script (`sh -c -- "…"`, `bash -c -x "…"`) are skipped, since
+ * the shell takes the first non-option word as the script.
  * @param input - The raw command string.
  * @returns The `-c` operands, in input order.
  */
@@ -36,6 +38,9 @@ export function findShellScripts(input: string): string[] {
         afterShell = false
         scriptIsNext = false
       }
+      continue
+    }
+    if (scriptIsNext && (token.startsWith('-') || token.startsWith('+'))) {
       continue
     }
     if (scriptIsNext) {

@@ -11,6 +11,10 @@ describe('checkCommand: sh/bash -c command strings', () => {
     'sudo bash -c "HUSKY=0 git commit -m x"',
     `bash -c "bash -c 'git commit --no-verify -m x'"`,
     `git -c alias.x='!sh -c "git commit --no-verify -m y"' x`,
+    // Option words between -c and the script.
+    'sh -c -- "git commit --no-verify -m x"',
+    'bash -c -x "git commit --no-verify -m x"',
+    'bash -c +e "git push --no-verify"',
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })
