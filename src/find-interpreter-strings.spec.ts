@@ -7,9 +7,9 @@ describe('findInterpreterStrings', () => {
     [`perl -e 'system("git push")'`, ['git push']],
     [
       `node -e "require('child_process').execSync('git log')"`,
-      ['child_process', 'git log'],
+      ['child_process', 'git log', 'child_process git log'],
     ],
-    [`/usr/bin/python3.12 -c "print('a', \\"b\\")"`, ['a', 'b']],
+    [`/usr/bin/python3.12 -c "print('a', \\"b\\")"`, ['a', 'b', 'a b']],
     [`ruby -e 'system "git fetch"'`, ['git fetch']],
   ])('reads %s', (input, literals) => {
     expect(findInterpreterStrings(input)).toEqual(literals)

@@ -3,11 +3,20 @@ import { tokenizeCommand } from './tokenize-command.js'
 /** Shell control operators that end a statement. */
 const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
-/** Matches an interpreter name: python, python3, python3.12, perl, ruby, node. */
-const INTERPRETER = /^(?:python[\d.]*|perl|ruby|node)$/
+/** Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php, lua. */
+const INTERPRETER = /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua)$/
 
-/** Interpreter options whose value is code: python `-c`, perl/ruby/node `-e`. */
-const CODE_OPTIONS = new Set(['-c', '-e', '-E', '--eval'])
+/** Long options whose value is code (`node --eval`, `node --print`). */
+const LONG_CODE_OPTIONS = new Set(['--eval', '--print'])
+
+/** A short-option bundle ending in a code option: `-c`, `-Ic`, `-pe`, `-r`. */
+const SHORT_CODE_OPTION = /^-[A-Za-z]*[ceEpr]$/
+
+/** A code option with its code attached: `-c'…'` read as `-c…`. */
+const ATTACHED_CODE = /^-[A-Za-z]*?[ceEr]([^A-Za-z][\s\S]*)$/
+
+/** `deno eval <code>` takes code as a sub-command argument. */
+const DENO_EVAL = new Set(['eval'])
 
 /**
  * Returns the string literals in a piece of interpreter code. A git command
@@ -52,6 +61,13 @@ function stringLiterals(code: string): string[] {
  */
 export function findInterpreterStrings(input: string): string[] {
   const literals: string[] = []
+  const addCode = (code: string): void => {
+    const found = stringLiterals(code)
+    literals.push(...found)
+    // An argv list (`run(["git", "commit", …])`) splits a command across
+    // literals, so the joined literals are checked as one command too.
+    if (found.length > 1) literals.push(found.join(' '))
+  }
   let afterInterpreter = false
   let codeIsNext = false
   for (const token of tokenizeCommand(input)) {
@@ -62,14 +78,26 @@ export function findInterpreterStrings(input: string): string[] {
       }
       continue
     }
+    const eq = token.indexOf('=')
+    const attached = afterInterpreter ? ATTACHED_CODE.exec(token) : null
     if (codeIsNext) {
-      literals.push(...stringLiterals(token))
+      addCode(token)
       codeIsNext = false
       afterInterpreter = false
     } else if (INTERPRETER.test(token.slice(token.lastIndexOf('/') + 1))) {
       afterInterpreter = true
-    } else if (afterInterpreter && CODE_OPTIONS.has(token)) {
+    } else if (!afterInterpreter) {
+      continue
+    } else if (LONG_CODE_OPTIONS.has(token) || SHORT_CODE_OPTION.test(token)) {
       codeIsNext = true
+    } else if (DENO_EVAL.has(token)) {
+      codeIsNext = true
+    } else if (eq > 0 && LONG_CODE_OPTIONS.has(token.slice(0, eq))) {
+      addCode(token.slice(eq + 1))
+      afterInterpreter = false
+    } else if (attached !== null) {
+      addCode(attached[1])
+      afterInterpreter = false
     }
   }
   return literals
