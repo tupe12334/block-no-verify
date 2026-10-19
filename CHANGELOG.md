@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.13
+
+### Patch Changes
+
+- 73e5b2f: Follow piped scripts through `time`, `nohup` and `doas`, and past wrapper option values such as `sudo -u root` and `timeout -s KILL 5` (#101).
+
 ## 1.3.12
 
 ### Patch Changes
