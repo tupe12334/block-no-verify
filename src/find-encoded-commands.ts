@@ -1,7 +1,13 @@
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** PowerShell hosts; `.exe` names come from WSL and Git Bash. */
-const POWERSHELL = /^(?:pwsh|powershell)(?:\.exe)?$/i
+const POWERSHELL = /^(?:pwsh(?:-preview)?|powershell)(?:\.exe)?$/i
+
+/**
+ * A switch lead: one or two of the same dash, or a `/`. pwsh's dashes are
+ * `-` plus en dash, em dash and horizontal bar.
+ */
+const SWITCH_LEAD = /^(?:([-\u2013\u2014\u2015])\1?|\/)/
 
 /** Shell control operators that end a statement. */
 const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
@@ -11,14 +17,26 @@ const ENCODED_COMMAND = 'encodedcommand'
 
 /**
  * Tells whether a word names PowerShell's `-EncodedCommand` parameter:
- * `-e`, `-enc`, `-EncodedCommand`, `-ec`, also with a `/` lead.
+ * `-e`, `-enc`, `-EncodedCommand`, `-ec`, also with a `--`, `/` or
+ * Unicode dash lead. pwsh trims the word before it matches.
  * @param word - An argv word.
  * @returns True for an `-EncodedCommand` spelling.
  */
 function isEncodedOption(word: string): boolean {
-  if (!/^[-/]e/i.test(word)) return false
-  const name = word.slice(1).toLowerCase()
-  return name === 'ec' || ENCODED_COMMAND.startsWith(name)
+  const trimmed = word.trim()
+  const lead = SWITCH_LEAD.exec(trimmed)
+  if (lead === null) return false
+  const name = trimmed.slice(lead[0].length).toLowerCase()
+  return name === 'ec' || (name !== '' && ENCODED_COMMAND.startsWith(name))
+}
+
+/**
+ * Returns a word's program name without a `/` or `\\` path prefix.
+ * @param word - An argv word.
+ * @returns The base name.
+ */
+function baseName(word: string): string {
+  return word.slice(Math.max(word.lastIndexOf('/'), word.lastIndexOf('\\')) + 1)
 }
 
 /**
@@ -43,7 +61,7 @@ export function findEncodedCommands(input: string): string[] {
     if (valueIsNext) {
       commands.push(Buffer.from(token, 'base64').toString('utf16le'))
       valueIsNext = false
-    } else if (POWERSHELL.test(token.slice(token.lastIndexOf('/') + 1))) {
+    } else if (POWERSHELL.test(baseName(token))) {
       afterHost = true
     } else if (afterHost && isEncodedOption(token)) {
       valueIsNext = true

@@ -10,6 +10,12 @@ describe('checkCommand: pwsh -EncodedCommand', () => {
     `pwsh -EncodedCommand ${encode('git commit --no-verify -m x')}`,
     `pwsh -NoProfile -enc ${encode('git push --no-verify')}`,
     `powershell.exe -e ${encode('git commit -n -m x')}`,
+    // Spellings pwsh's switch parser accepts.
+    `pwsh --enc ${encode('git push --no-verify')}`,
+    `pwsh \u2014ec ${encode('git push --no-verify')}`,
+    `pwsh ' -enc' ${encode('git push --no-verify')}`,
+    `'C:\\Program Files\\PowerShell\\7\\pwsh.exe' -e ${encode('git push --no-verify')}`,
+    `pwsh-preview -e ${encode('git push --no-verify')}`,
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })
