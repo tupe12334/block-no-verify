@@ -13,7 +13,8 @@ When using AI coding assistants like Claude Code, Cursor, Windsurf, Cline, or Am
 - calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely,
 - setting a hook manager's own disable environment variable, e.g. `HUSKY=0`, `LEFTHOOK=0`, `OVERCOMMIT_DISABLE=1`, or a non-empty `SKIP=` (pre-commit framework),
 - hiding any of the above in a git alias (`git -c alias.ci="commit --no-verify" ci`),
-- wrapping any of the above in a shell command string (`bash -c "..."`, `sh -c '...'`).
+- wrapping any of the above in a shell command string (`bash -c "..."`, `sh -c '...'`),
+- running any of the above from a string in code passed to an interpreter (`python3 -c`, `node -e`, `perl -e`, an `awk` program) or fed to one on stdin, from an `echo`/`printf` script piped into a shell, or from a `pwsh -EncodedCommand` value.
 
 This package provides a CLI that blocks all of these, working with any AI tool that supports command / tool-use hooks. Text that only mentions a bypass inside a commit or PR message is allowed. A command it cannot parse (for example an unterminated `${`) is blocked, because it cannot confirm that the command is safe.
 
