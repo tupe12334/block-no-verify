@@ -14,6 +14,12 @@ describe('findFedScripts', () => {
     ["echo 'git status' | tee log | sh", ['git status']],
     ["echo 'git status' | cat | head -n 1 | sh", ['git status']],
     ["cat <<< 'git status' | sh", ['git status']],
+    // Wrapper options with a value, and more wrappers.
+    ["echo 'git status' | sudo -u root sh", ['git status']],
+    ["echo 'git status' | timeout -s KILL 5 sh", ['git status']],
+    ["echo 'git status' | time sh", ['git status']],
+    ["echo 'git status' | nohup sh", ['git status']],
+    ["echo 'git status' | doas -u root sh", ['git status']],
   ])('reads %s', (input, scripts) => {
     expect(findFedScripts(input)).toEqual(scripts)
   })
