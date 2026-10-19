@@ -1,8 +1,11 @@
 import { readSplitStringOption } from './read-split-string-option.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
-/** Shells whose `-c` operand is a command string they run. */
-const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh'])
+/** Shells whose `-c` operand is a command string they run (#101). */
+const SHELLS = new Set(
+  // cspell:disable-next-line
+  'sh bash zsh dash ksh ash mksh fish csh tcsh'.split(' ')
+)
 
 /** `eval` joins its arguments and runs them as a command line. */
 const EVAL = new Set(['eval'])
