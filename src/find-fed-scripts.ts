@@ -24,12 +24,14 @@ const WRAPPERS = new Set(
   'sudo doas env command nice nohup time timeout exec'.split(' ')
 )
 
-/** Wrapper options that take the next word as their value. */
-const WRAPPER_VALUE_OPTIONS = new Set(
-  '-u -g -s -k -C -n --user --group --signal --kill-after --adjustment'.split(
-    ' '
-  )
-)
+/** Per wrapper, the options that take the next word as their value. */
+const WRAPPER_VALUE_OPTIONS = new Map([
+  ['sudo', new Set(['-u', '-g', '-C', '-h', '-p', '-U', '--user', '--group'])],
+  ['doas', new Set(['-u', '-C'])],
+  ['timeout', new Set(['-s', '-k', '--signal', '--kill-after'])],
+  ['nice', new Set(['-n', '--adjustment'])],
+  ['env', new Set(['-u', '-C', '--unset', '--chdir'])],
+])
 
 /**
  * Returns the program name of a word, without any path prefix.
@@ -48,17 +50,16 @@ function baseName(word: string): string {
  * @returns The index, or -1 when there is no program word.
  */
 function programIndex(words: string[]): number {
+  let valueOptions: Set<string> | undefined
   let skipNext = false
   for (const [index, word] of words.entries()) {
     if (skipNext) {
       skipNext = false
-    } else if (WRAPPER_VALUE_OPTIONS.has(word)) {
+    } else if (valueOptions?.has(word) === true) {
       skipNext = true
-    } else if (
-      !WRAPPERS.has(baseName(word)) &&
-      !/^[-\d]/.test(word) &&
-      !/^[A-Za-z_]\w*=/.test(word)
-    ) {
+    } else if (WRAPPERS.has(baseName(word))) {
+      valueOptions = WRAPPER_VALUE_OPTIONS.get(baseName(word))
+    } else if (!/^[-\d]/.test(word) && !/^[A-Za-z_]\w*=/.test(word)) {
       return index
     }
   }

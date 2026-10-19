@@ -20,6 +20,9 @@ describe('findFedScripts', () => {
     ["echo 'git status' | time sh", ['git status']],
     ["echo 'git status' | nohup sh", ['git status']],
     ["echo 'git status' | doas -u root sh", ['git status']],
+    // sudo -s and -k are flags, not value options.
+    ["echo 'git status' | sudo -s sh", ['git status']],
+    ["echo 'git status' | sudo -E -k bash", ['git status']],
   ])('reads %s', (input, scripts) => {
     expect(findFedScripts(input)).toEqual(scripts)
   })
