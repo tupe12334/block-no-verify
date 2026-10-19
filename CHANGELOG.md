@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.12
+
+### Patch Changes
+
+- f90c589: Follow scripts piped into a shell through wrappers and pass-through stages (#101): `| sudo sh`, `| env bash`, `| timeout 5 sh`, `|& sh`, `| tee x | sh`, `| cat | sh`, and `cat <<< '…' | sh`.
+
 ## 1.3.11
 
 ### Patch Changes
