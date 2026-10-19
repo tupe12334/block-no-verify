@@ -14,6 +14,13 @@ describe('checkCommand: git aliases', () => {
       'git config --file .gitconfig alias.ci "commit --no-verify"',
       `git -c alias.x='!git commit --no-verify -m y' x`,
       `git -c alias.x='!HUSKY=0 git commit -m y' x`,
+      // The flag added at the call, or through an alias chain.
+      'git -c alias.x=commit x --no-verify -m y',
+      'git -c alias.x=commit x -n -m y',
+      'git config alias.ci commit && git ci -n -m y',
+      `git -c alias.x=commit -c alias.y='!git x --no-verify' y`,
+      // An alias defined elsewhere: unknown sub-command plus the flag.
+      'git ci --no-verify -m y',
     ])('%s', command => {
       const result = checkCommand(command)
       expect(result.blocked).toBe(true)

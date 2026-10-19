@@ -1,3 +1,4 @@
+import { quote } from 'shell-quote'
 import type { CheckCommandOptions } from './check-command-options.js'
 import type { CheckResult } from './check-result.js'
 import { detectGitCommand } from './detect-git-command.js'
@@ -7,6 +8,8 @@ import { hasHooksPathOverride } from './has-hooks-path-override.js'
 import { detectManagerBypass } from './managers/index.js'
 import { maskMessageValues } from './mask-message-values.js'
 import { findAliasCommands } from './find-alias-commands.js'
+import { findGitInvocations } from './git-invocations.js'
+import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 import { issuesUrl } from './package-info.js'
 
 /**
@@ -67,6 +70,21 @@ export function checkCommand(
         blocked: true,
         reason: `BLOCKED: A git alias defined in this command runs a hook bypass. ${aliasResult.reason === undefined ? '' : aliasResult.reason}`,
         gitCommand: aliasResult.gitCommand,
+      }
+    }
+  }
+
+  // A sub-command the guard does not know may be an alias defined elsewhere
+  // (`git config alias.ci commit` earlier, then `git ci --no-verify`), so
+  // `--no-verify` after it is blocked too.
+  for (const call of findGitInvocations(input)) {
+    const guarded = GIT_COMMANDS_WITH_NO_VERIFY.some(
+      command => command === call.subcommand
+    )
+    if (!guarded && hasNoVerifyFlag(`git push ${quote(call.args)}`, 'push')) {
+      return {
+        blocked: true,
+        reason: `BLOCKED: --no-verify is not allowed with git ${call.subcommand}, which may be an alias for a guarded command. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
       }
     }
   }
