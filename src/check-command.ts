@@ -5,6 +5,7 @@ import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
 import { detectManagerBypass } from './managers/index.js'
+import { maskQuotedText } from './mask-quoted-text.js'
 import { issuesUrl } from './package-info.js'
 
 /**
@@ -43,7 +44,12 @@ export function checkCommand(
   // Checked before the `!gitCommand` early return: a bare `git config
   // core.hooksPath <value>` persistently redirects hooks without going
   // through a sub-command (e.g. commit/push) that supports --no-verify.
-  if (hasHooksPathOverride(input)) {
+  // Env and config checks are regex-based, so they scan the input with quoted
+  // free text masked: override-looking text in a commit message is not a
+  // bypass (#93).
+  const scanText = maskQuotedText(input)
+
+  if (hasHooksPathOverride(scanText)) {
     return {
       blocked: true,
       reason: `BLOCKED: Overriding core.hooksPath is not allowed${gitCommand === undefined ? '' : ` with git ${gitCommand}`}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
@@ -63,7 +69,7 @@ export function checkCommand(
     }
   }
 
-  const managerReason = detectManagerBypass(input, gitCommand)
+  const managerReason = detectManagerBypass(scanText, gitCommand)
   if (managerReason !== null) {
     return {
       blocked: true,
