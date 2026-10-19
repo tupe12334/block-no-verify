@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.16
+
+### Patch Changes
+
+- 3f1021a: Check string literals in code fed to `python`/`perl`/`ruby`/`node` on stdin through a pipe or here-string (#101).
+
 ## 1.3.15
 
 ### Patch Changes
