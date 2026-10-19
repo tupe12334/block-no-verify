@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.15
+
+### Patch Changes
+
+- 0a1d694: Decode `pwsh`/`powershell -EncodedCommand` (also `-e`, `-enc`, `-ec`) values and check the command they run (#101).
+- 8e59217: Check git commands inside Perl `q{}`/`qq{}`/`qx{}` and Ruby `%q()`/`%Q{}`/`%x()` quote operators, and inside `awk`/`gawk`/`mawk`/`nawk` programs (#101).
+
 ## 1.3.14
 
 ### Patch Changes
