@@ -34,6 +34,9 @@ describe('checkCommand: override text inside message values (#93)', () => {
       "echo 'git -c core.hooksPath=/dev/null commit' | sh",
       // A command substitution in a message runs too.
       'git commit -m "$(HUSKY=0 git commit -m inner)"',
+      // Only git and gh message values are masked: parallel -m runs its
+      // next word through a shell.
+      'parallel -m "git -c core.hooksPath=/dev/null commit -m x" ::: a',
     ])('%s', command => {
       expect(checkCommand(command).blocked).toBe(true)
     })

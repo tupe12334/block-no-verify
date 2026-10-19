@@ -41,4 +41,18 @@ describe('maskMessageValues', () => {
       'echo a b && git push'
     )
   })
+
+  it('masks only when the program is git or gh', () => {
+    expect(maskMessageValues('parallel -m "a b"')).toBe('parallel -m a b')
+    expect(maskMessageValues('python -m "a b"')).toBe('python -m a b')
+  })
+
+  it('finds the program after env assignments and per statement', () => {
+    expect(maskMessageValues('A=1 /usr/bin/git commit -m "a b"')).toBe(
+      'A=1 /usr/bin/git commit -m _'
+    )
+    expect(maskMessageValues('git commit -m "a b" && parallel -m "c d"')).toBe(
+      'git commit -m _ && parallel -m c d'
+    )
+  })
 })
