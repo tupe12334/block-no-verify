@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.8
+
+### Patch Changes
+
+- 417ff37: Update the npm description and keywords to match the bypasses the guard blocks.
+
 ## 1.3.7
 
 ### Patch Changes
