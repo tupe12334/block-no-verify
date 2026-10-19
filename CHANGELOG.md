@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.2
+
+### Patch Changes
+
+- d78226c: Fix two tokenizer disagreements with bash that let `--no-verify` bypass detection: an ANSI-C/locale quoted flag (`$'--no-verify'`) and a line continuation splitting the flag inside a double-quoted word (`"--no-ver\` + newline + `ify"`) (#78). The input is now normalized to the form `shell-quote` already tokenizes like bash before parsing, while leaving line continuations inside single-quoted text untouched.
+- a2f0177: Fix documentation issues found during validation. (#67)
+- e5c7186: Scope `--no-verify`/`-n` detection to the shell statement that invokes the guarded git command, so a `-n` belonging to a chained `echo`, `grep`, or `head` no longer blocks `git commit` (#70). Statement splitting works on `shell-quote` operator tokens, so separators inside quoted commit messages cannot hide a real bypass.
+
 ## 1.3.1
 
 ### Patch Changes
