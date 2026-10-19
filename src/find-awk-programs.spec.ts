@@ -12,6 +12,10 @@ describe('findAwkPrograms', () => {
     [`awk --assign x=1 -- '{print "a"}'`, ['a']],
     [`gawk -f lib.awk -e 'BEGIN{system("git log")}'`, ['git log']],
     [`awk '{x=$1%$2; system("git log")}'`, ['git log']],
+    [`gawk -e'BEGIN{system("git log")}'`, ['git log']],
+    [`gawk --sou='BEGIN{system("git log")}'`, ['git log']],
+    [`gawk --incl inplace --ass x=1 '{print "a"}' f`, ['a']],
+    [`gawk -E prog.awk '{print "a"}'`, ['a']],
   ])('reads %s', (input, literals) => {
     expect(findAwkPrograms(input)).toEqual(literals)
   })

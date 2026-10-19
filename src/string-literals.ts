@@ -14,7 +14,7 @@ const CLOSERS = new Map([
  * taken.
  */
 const QUOTE_OPERATOR =
-  /^(?:(?:qq|qx|qw|q)\s*([^\w\s=,;)\]}>])|%[qQxwWi]([^\w\s=,;)\]}>])|%([([{<]))/
+  /(?:(?:qq|qx|qw|q)\s*([^\w\s=,;)\]}>])|%[qQxwWiI]([^\w\s=,;)\]}>])|%([([{<]))/y
 
 /**
  * Reads a quoted body that starts after its opening delimiter. Bracket
@@ -53,21 +53,27 @@ function readQuoted(
 /**
  * Reads a closed quote operator at an index. A word or sigil before it
  * (`$q`, `$a%$b`) makes it code, and so does a missing closing delimiter.
+ * Once a delimiter has no closer, later operators with it are code too,
+ * which keeps a run of unclosed `q(` linear instead of quadratic.
  * @param code - The code.
  * @param i - The index to read at.
+ * @param unclosed - Delimiters already seen without a closer; updated.
  * @returns The body and the index past it, or null when none is there.
  */
 function readOperator(
   code: string,
-  i: number
+  i: number,
+  unclosed: Set<string>
 ): { body: string; end: number } | null {
-  const operator = QUOTE_OPERATOR.exec(code.slice(i))
-  if (operator === null || (i > 0 && /[\w$@%&]/.test(code.charAt(i - 1)))) {
-    return null
-  }
+  if (i > 0 && /[\w$@%&]/.test(code.charAt(i - 1))) return null
+  QUOTE_OPERATOR.lastIndex = i
+  const operator = QUOTE_OPERATOR.exec(code)
+  if (operator === null) return null
   // Exactly one group matches; the others are undefined and join as ''.
   const open = operator.slice(1).join('')
+  if (unclosed.has(open)) return null
   const quoted = readQuoted(code, i + operator[0].length, open)
+  if (!quoted.closed) unclosed.add(open)
   return quoted.closed ? quoted : null
 }
 
@@ -85,10 +91,14 @@ export function stringLiterals(
   quoteOperators: boolean
 ): string[] {
   const literals: string[] = []
+  const unclosed = new Set<string>()
   let i = 0
   while (i < code.length) {
     const char = code.charAt(i)
-    const quoted = quoteOperators ? readOperator(code, i) : null
+    const quoted =
+      quoteOperators && (char === 'q' || char === '%')
+        ? readOperator(code, i, unclosed)
+        : null
     if (quoted !== null) {
       // The body may itself hold plain literals (`qq{system "…"}`).
       literals.push(quoted.body, ...stringLiterals(quoted.body, false))
