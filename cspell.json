@@ -45,7 +45,8 @@
     "vitest",
     "worktree",
     "xonsh",
-    "yash"
+    "yash",
+    "encodedcommand"
   ],
   "languageSettings": [
     {
