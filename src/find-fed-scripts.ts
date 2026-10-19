@@ -19,7 +19,19 @@ const PRINTERS = new Set(['echo', 'printf'])
 const PASS_THROUGH = new Set(['cat', 'tee', 'head', 'tail'])
 
 /** Programs that run the next word as a program (`sudo sh`, `env bash`). */
-const WRAPPERS = new Set(['sudo', 'env', 'command', 'nice', 'timeout', 'exec'])
+const WRAPPERS = new Set(
+  // cspell:disable-next-line
+  'sudo doas env command nice nohup time timeout exec'.split(' ')
+)
+
+/** Per wrapper, the options that take the next word as their value. */
+const WRAPPER_VALUE_OPTIONS = new Map([
+  ['sudo', new Set(['-u', '-g', '-C', '-h', '-p', '-U', '--user', '--group'])],
+  ['doas', new Set(['-u', '-C'])],
+  ['timeout', new Set(['-s', '-k', '--signal', '--kill-after'])],
+  ['nice', new Set(['-n', '--adjustment'])],
+  ['env', new Set(['-u', '-C', '--unset', '--chdir'])],
+])
 
 /**
  * Returns the program name of a word, without any path prefix.
@@ -32,17 +44,26 @@ function baseName(word: string): string {
 
 /**
  * Returns the index of the stage's program: its first word that is not a
- * wrapper, a wrapper option (`-u`, `5`) or an env assignment.
+ * wrapper, a wrapper option or its value (`-u root`, `-s KILL`, `5`), or an
+ * env assignment.
  * @param words - The stage's argv words.
  * @returns The index, or -1 when there is no program word.
  */
 function programIndex(words: string[]): number {
-  return words.findIndex(
-    word =>
-      !WRAPPERS.has(baseName(word)) &&
-      !/^[-\d]/.test(word) &&
-      !/^[A-Za-z_]\w*=/.test(word)
-  )
+  let valueOptions: Set<string> | undefined
+  let skipNext = false
+  for (const [index, word] of words.entries()) {
+    if (skipNext) {
+      skipNext = false
+    } else if (valueOptions?.has(word) === true) {
+      skipNext = true
+    } else if (WRAPPERS.has(baseName(word))) {
+      valueOptions = WRAPPER_VALUE_OPTIONS.get(baseName(word))
+    } else if (!/^[-\d]/.test(word) && !/^[A-Za-z_]\w*=/.test(word)) {
+      return index
+    }
+  }
+  return -1
 }
 
 /**
