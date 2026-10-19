@@ -9,11 +9,13 @@ Powered by [`@polyhook/sdk`](https://github.com/tupe12334/polyhook) — write th
 When using AI coding assistants like Claude Code, Cursor, Windsurf, Cline, or Amp, you might have git hooks (pre-commit, pre-push) that enforce code quality, run tests, or perform security checks. Agents can side-step those hooks in several common ways:
 
 - passing `--no-verify` to a git command,
-- overriding `core.hooksPath` (e.g. `git -c core.hooksPath=/dev/null ...`),
+- overriding `core.hooksPath` in any letter case (e.g. `git -c core.hookspath=/dev/null ...`),
 - calling GitHub MCP tools such as `mcp__github__push_files` that commit or merge directly through the GitHub API, skipping the local hook chain entirely,
-- setting a hook manager's own disable environment variable, e.g. `HUSKY=0`, `LEFTHOOK=0`, `OVERCOMMIT_DISABLE=1`, or a non-empty `SKIP=` (pre-commit framework).
+- setting a hook manager's own disable environment variable, e.g. `HUSKY=0`, `LEFTHOOK=0`, `OVERCOMMIT_DISABLE=1`, or a non-empty `SKIP=` (pre-commit framework),
+- hiding any of the above in a git alias (`git -c alias.ci="commit --no-verify" ci`),
+- wrapping any of the above in a shell command string (`bash -c "..."`, `sh -c '...'`).
 
-This package provides a CLI that blocks all of these, working with any AI tool that supports command / tool-use hooks.
+This package provides a CLI that blocks all of these, working with any AI tool that supports command / tool-use hooks. Text that only mentions a bypass inside a commit or PR message is allowed. A command it cannot parse (for example an unterminated `${`) is blocked, because it cannot confirm that the command is safe.
 
 ## Used By
 
