@@ -132,5 +132,24 @@ describe('hasHooksPathOverride', () => {
     it('should not detect empty input', () => {
       expect(hasHooksPathOverride('')).toBe(false)
     })
+
+    it('should not detect a bare lowercase read', () => {
+      expect(hasHooksPathOverride('git config core.hookspath')).toBe(false)
+    })
+  })
+
+  // Git config keys are case-insensitive (#91).
+  describe('should detect any key casing', () => {
+    it.each([
+      'git -c core.hookspath=/dev/null commit -m x',
+      'git -c CORE.HOOKSPATH=/dev/null commit -m x',
+      "git -c 'Core.HooksPath=/tmp' push",
+      'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hookspath GIT_CONFIG_VALUE_0=/dev/null git commit',
+      `GIT_CONFIG_PARAMETERS="'core.hookspath'='/dev/null'" git commit`,
+      'git config core.hookspath /dev/null',
+      'git config --global CORE.HOOKSPATH=/tmp/none',
+    ])('%s', command => {
+      expect(hasHooksPathOverride(command)).toBe(true)
+    })
   })
 })

@@ -16,6 +16,7 @@
     "doas",
     "esbenp",
     "eslint",
+    "hookspath",
     "husky",
     "infile",
     "lcov",
