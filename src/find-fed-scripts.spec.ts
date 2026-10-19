@@ -6,6 +6,14 @@ describe('findFedScripts', () => {
     ["echo 'git status' | sh", ['git status']],
     ["printf '%s' 'git push' | /bin/bash", ['%s git push']],
     ["bash <<< 'git status'", ['git status']],
+    // Code fed to an interpreter: its string literals.
+    [`echo 'import os; os.system("git log")' | python3`, ['git log']],
+    [`python3 <<< 'import os; os.system("git log")'`, ['git log']],
+    [`echo 'system qq{git log}' | sudo perl`, ['git log']],
+    [
+      `echo "require('x').execSync('git log')" | node`,
+      ['x', 'git log', 'x git log'],
+    ],
     // Wrappers before the shell, and pass-through stages.
     ["echo 'git status' | sudo sh", ['git status']],
     ["echo 'git status' | env A=1 bash", ['git status']],

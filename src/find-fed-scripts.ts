@@ -1,3 +1,5 @@
+import { codeLiterals } from './code-literals.js'
+import { isInterpreter } from './is-interpreter.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Shells that run a script read from stdin. */
@@ -71,7 +73,8 @@ function programIndex(words: string[]): number {
  * caller can check them like typed commands (#101):
  * - `echo '…' | sh`, `printf '…' | sudo bash`, `echo '…' | tee x | sh`: the
  *   printed arguments, carried through `cat`/`tee`/`head`/`tail` stages;
- * - `sh <<< '…'` and `cat <<< '…' | sh`: the here-string.
+ * - `sh <<< '…'` and `cat <<< '…' | sh`: the here-string;
+ * - the same fed to python/perl/ruby/node: the code's string literals.
  * A printed argument that is only an option or a printf format is checked
  * too, which can only widen the scan.
  * @param input - The raw command string.
@@ -89,6 +92,10 @@ export function findFedScripts(input: string): string[] {
     const program = index === -1 ? '' : baseName(words.slice(index)[0])
     const stdin = hereString !== null ? hereString : fed
     if (stdin !== null && SHELLS.has(program)) scripts.push(stdin.join(' '))
+    // Code fed to an interpreter runs git from its string literals.
+    if (stdin !== null && isInterpreter(program)) {
+      scripts.push(...codeLiterals(stdin.join(' '), program))
+    }
     words = words.slice(index + 1)
     hereString = null
     if (PRINTERS.has(program)) return words
