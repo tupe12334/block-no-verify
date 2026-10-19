@@ -7,6 +7,7 @@ import { hasHooksPathOverride } from './has-hooks-path-override.js'
 import { detectManagerBypass } from './managers/index.js'
 import { maskMessageValues } from './mask-message-values.js'
 import { findAliasCommands } from './find-alias-commands.js'
+import { findShellScripts } from './find-shell-scripts.js'
 import { findUnknownSubcommandBypass } from './find-unknown-subcommand-bypass.js'
 import { issuesUrl } from './package-info.js'
 
@@ -68,6 +69,18 @@ export function checkCommand(
         blocked: true,
         reason: `BLOCKED: A git alias defined in this command runs a hook bypass. ${aliasResult.reason === undefined ? '' : aliasResult.reason}`,
         gitCommand: aliasResult.gitCommand,
+      }
+    }
+  }
+
+  // `sh -c "…"` runs its operand as a command, so check it as one (#101).
+  for (const script of findShellScripts(input)) {
+    const scriptResult = checkCommand(script, options)
+    if (scriptResult.blocked) {
+      return {
+        blocked: true,
+        reason: `BLOCKED: A shell -c command string in this command runs a hook bypass. ${scriptResult.reason === undefined ? '' : scriptResult.reason}`,
+        gitCommand: scriptResult.gitCommand,
       }
     }
   }
