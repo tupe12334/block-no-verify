@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.17
+
+### Patch Changes
+
+- fde6ad6: README: list the indirect forms the hook catches (piped scripts, interpreter code, code fed on stdin, `pwsh -EncodedCommand`).
+
 ## 1.3.16
 
 ### Patch Changes
