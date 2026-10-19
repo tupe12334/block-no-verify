@@ -20,6 +20,11 @@ describe('checkCommand: interpreter code strings', () => {
     `deno eval "new Deno.Command('git', {args: ['push', '--no-verify']}).outputSync()"`,
     `php -r 'system("git commit --no-verify -m x");'`,
     `lua -e 'os.execute("git push --no-verify")'`,
+    // node -r takes a module, then -e still holds the code.
+    `node -r x -e "require('child_process').execSync('git push --no-verify')"`,
+    // Code attached to its option.
+    `python3 -c"import os; os.system('git commit --no-verify -m x')"`,
+    `perl -e'system("git commit --no-verify -m x")'`,
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })
