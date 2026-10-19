@@ -4,7 +4,9 @@ import { tokenizeCommand } from './tokenize-command.js'
 /** Shells whose `-c` operand is a command string they run (#101). */
 const SHELLS = new Set(
   // cspell:disable-next-line
-  'sh bash zsh dash ksh ash mksh fish csh tcsh'.split(' ')
+  'sh bash zsh dash ksh ash mksh fish csh tcsh yash posh rc nu elvish xonsh pwsh powershell'.split(
+    ' '
+  )
 )
 
 /** `eval` joins its arguments and runs them as a command line. */
@@ -18,6 +20,12 @@ const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
 /** Matches a short-option bundle that includes `c`: `-c`, `-lc`, `-ec`. */
 const C_OPTION = /^-[a-z]*c[a-z]*$/
+
+/** Matches a long command option: fish/nu `--command(s)`, pwsh `-Command`. */
+const COMMAND_OPTION = /^--?commands?$/i
+
+/** Matches a long command option with an attached value (`--command=…`). */
+const COMMAND_OPTION_VALUE = /^--?commands?=([\s\S]*)$/i
 
 /** An env assignment word inside a split string (`A=1`). */
 const ENV_ASSIGNMENT = /^[A-Za-z_]\w*=/
@@ -88,8 +96,14 @@ export function findShellScripts(input: string): string[] {
       after = 'shell'
     } else if (ENV.has(baseName(token))) {
       after = 'env'
-    } else if (after === 'shell' && C_OPTION.test(token)) {
+    } else if (
+      after === 'shell' &&
+      (C_OPTION.test(token) || COMMAND_OPTION.test(token))
+    ) {
       next = 'shell'
+    } else if (after === 'shell' && COMMAND_OPTION_VALUE.test(token)) {
+      scripts.push(token.slice(token.indexOf('=') + 1))
+      after = null
     } else if (splitString === undefined) {
       next = 'env'
     } else if (splitString !== null) {
