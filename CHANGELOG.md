@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.9
+
+### Patch Changes
+
+- a6fb647: Check the `-c` operand of `ash`, `mksh`, `fish`, `csh` and `tcsh` too (#101), not only `sh`, `bash`, `zsh`, `dash` and `ksh`.
+
 ## 1.3.8
 
 ### Patch Changes
