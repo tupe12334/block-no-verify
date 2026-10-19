@@ -32,6 +32,19 @@ describe('checkCommand: interpreter code strings', () => {
     `ruby -e '%x(git push --no-verify)'`,
     `awk 'BEGIN{system("git push --no-verify")}'`,
     `gawk -F: 'BEGIN{system("git commit --no-verify -m x")}' /etc/passwd`,
+    // Code that only looks like a quote operator, and more awk options.
+    `perl -e '$r=$a%$b; system "git commit -m x --no-verify"'`,
+    `perl -e 'print 7%-3; system "git commit -m x --no-verify"'`,
+    `perl -e '%$h; system "git commit -m x --no-verify"'`,
+    `ruby -e 'x=7%-3; system "git commit -m x --no-verify"'`,
+    `python3 -c 'x=a%-1; import os; os.system("git commit -m x --no-verify")'`,
+    `python3 -c 'q-1; import os; os.system("git commit -m x --no-verify")'`,
+    `node -e 'const q=x; q?.a; require("child_process").execSync("git commit -m x --no-verify")'`,
+    `awk -vname=1 'BEGIN{system("git commit -m x --no-verify")}'`,
+    `gawk --source='BEGIN{system("git commit -m x --no-verify")}'`,
+    `gawk -i inplace 'BEGIN{system("git commit -m x --no-verify")}' f`,
+    `awk --assign x=1 'BEGIN{system("git commit -m x --no-verify")}'`,
+    `awk '{x=$1%$2; system("git commit -m x --no-verify")}'`,
   ])('blocks %s', command => {
     expect(checkCommand(command).blocked).toBe(true)
   })

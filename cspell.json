@@ -48,7 +48,10 @@
     "worktree",
     "xonsh",
     "yash",
-    "encodedcommand"
+    "encodedcommand",
+    "vname",
+    "inplace",
+    "ordchr"
   ],
   "languageSettings": [
     {

@@ -14,7 +14,7 @@ describe('stringLiterals', () => {
     ['%Q[git status]', ['git status']],
     ['%(git fetch)', ['git fetch']],
   ])('reads %s', (code, literals) => {
-    expect(stringLiterals(code)).toEqual(literals)
+    expect(stringLiterals(code, true)).toEqual(literals)
   })
 
   it.each([
@@ -25,6 +25,6 @@ describe('stringLiterals', () => {
     'my $q = 1; $q++',
     'a %= 2',
   ])('finds nothing in %s', code => {
-    expect(stringLiterals(code)).toEqual([])
+    expect(stringLiterals(code, true)).toEqual([])
   })
 })

@@ -4,15 +4,11 @@ import { tokenizeCommand } from './tokenize-command.js'
 /** Shell control operators that end a statement. */
 const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
-/** Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php, lua, awk. */
-const INTERPRETER =
-  /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua|[gmn]?awk)$/
+/** Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php, lua. */
+const INTERPRETER = /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua)$/
 
-/** awk's program is its first operand (`awk 'BEGIN{system("…")}'`). */
-const AWK = /^[gmn]?awk$/
-
-/** awk options that take the next word as their value. */
-const AWK_VALUE_OPTIONS = new Set(['-F', '-v', '-f'])
+/** Languages with `q{}` / `%q()` quote operators. */
+const QUOTE_OPERATOR_LANGUAGES = new Set(['perl', 'ruby'])
 
 /** Long options whose value is code (`node --eval`, `node --print`). */
 const LONG_CODE_OPTIONS = new Set(['--eval', '--print'])
@@ -40,7 +36,10 @@ const DENO_EVAL = new Set(['eval'])
 export function findInterpreterStrings(input: string): string[] {
   const literals: string[] = []
   const addCode = (code: string): void => {
-    const found = stringLiterals(code)
+    const found = stringLiterals(
+      code,
+      QUOTE_OPERATOR_LANGUAGES.has(interpreter)
+    )
     literals.push(...found)
     // An argv list (`run(["git", "commit", …])`) splits a command across
     // literals, so the joined literals are checked as one command too.
@@ -49,7 +48,6 @@ export function findInterpreterStrings(input: string): string[] {
   let afterInterpreter = false
   let codeIsNext = false
   let interpreter = ''
-  let skipNext = false
   for (const token of tokenizeCommand(input)) {
     if (typeof token !== 'string') {
       if ('op' in token && CONTROL_OPERATORS.has(token.op)) {
@@ -70,7 +68,6 @@ export function findInterpreterStrings(input: string): string[] {
       afterInterpreter = false
     } else if (INTERPRETER.test(token.slice(token.lastIndexOf('/') + 1))) {
       afterInterpreter = true
-      skipNext = false
       interpreter = token.slice(token.lastIndexOf('/') + 1)
     } else if (!afterInterpreter) {
       continue
@@ -80,13 +77,6 @@ export function findInterpreterStrings(input: string): string[] {
       codeIsNext = true
     } else if (DENO_EVAL.has(token)) {
       codeIsNext = true
-    } else if (AWK.test(interpreter) && AWK_VALUE_OPTIONS.has(token)) {
-      skipNext = true
-    } else if (AWK.test(interpreter) && skipNext) {
-      skipNext = false
-    } else if (AWK.test(interpreter) && !token.startsWith('-')) {
-      addCode(token)
-      afterInterpreter = false
     } else if (eq > 0 && LONG_CODE_OPTIONS.has(token.slice(0, eq))) {
       addCode(token.slice(eq + 1))
       afterInterpreter = false
