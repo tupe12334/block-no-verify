@@ -9,11 +9,17 @@ const SHELLS = new Set(
 /** The here-string operator, as a set for an exact lookup. */
 const HERE_STRING = new Set(['<<<'])
 
-/** The pipe operator, as a set for an exact lookup. */
-const PIPE = new Set(['|'])
+/** Pipe operators that feed one stage's stdout to the next. */
+const PIPES = new Set(['|', '|&'])
 
 /** Programs whose arguments become the text they write to stdout. */
 const PRINTERS = new Set(['echo', 'printf'])
+
+/** Programs that pass their stdin through to stdout. */
+const PASS_THROUGH = new Set(['cat', 'tee', 'head', 'tail'])
+
+/** Programs that run the next word as a program (`sudo sh`, `env bash`). */
+const WRAPPERS = new Set(['sudo', 'env', 'command', 'nice', 'timeout', 'exec'])
 
 /**
  * Returns the program name of a word, without any path prefix.
@@ -25,10 +31,26 @@ function baseName(word: string): string {
 }
 
 /**
+ * Returns the index of the stage's program: its first word that is not a
+ * wrapper, a wrapper option (`-u`, `5`) or an env assignment.
+ * @param words - The stage's argv words.
+ * @returns The index, or -1 when there is no program word.
+ */
+function programIndex(words: string[]): number {
+  return words.findIndex(
+    word =>
+      !WRAPPERS.has(baseName(word)) &&
+      !/^[-\d]/.test(word) &&
+      !/^[A-Za-z_]\w*=/.test(word)
+  )
+}
+
+/**
  * Returns the scripts that the input feeds to a shell on stdin, so the
  * caller can check them like typed commands (#101):
- * - `echo '…' | sh` and `printf '…' | bash`: the printed arguments;
- * - `sh <<< '…'`: the here-string.
+ * - `echo '…' | sh`, `printf '…' | sudo bash`, `echo '…' | tee x | sh`: the
+ *   printed arguments, carried through `cat`/`tee`/`head`/`tail` stages;
+ * - `sh <<< '…'` and `cat <<< '…' | sh`: the here-string.
  * A printed argument that is only an option or a printf format is checked
  * too, which can only widen the scan.
  * @param input - The raw command string.
@@ -37,32 +59,33 @@ function baseName(word: string): string {
 export function findFedScripts(input: string): string[] {
   const scripts: string[] = []
   let words: string[] = []
-  let printed: string[] | null = null
+  let fed: string[] | null = null
+  let hereString: string[] | null = null
   let hereStringIsNext = false
+  // Ends a pipeline stage; returns what the stage writes to stdout.
+  const endStage = (): string[] | null => {
+    const index = programIndex(words)
+    const program = index === -1 ? '' : baseName(words.slice(index)[0])
+    const stdin = hereString !== null ? hereString : fed
+    if (stdin !== null && SHELLS.has(program)) scripts.push(stdin.join(' '))
+    words = words.slice(index + 1)
+    hereString = null
+    if (PRINTERS.has(program)) return words
+    return PASS_THROUGH.has(program) ? stdin : null
+  }
   for (const token of tokenizeCommand(input)) {
     if (typeof token === 'string') {
-      if (hereStringIsNext) {
-        scripts.push(token)
-        hereStringIsNext = false
-      } else if (
-        words.length === 0 &&
-        printed !== null &&
-        SHELLS.has(baseName(token))
-      ) {
-        scripts.push(printed.join(' '))
-      }
+      if (hereStringIsNext) hereString = [token]
+      hereStringIsNext = false
       words.push(token)
-      continue
+    } else if ('op' in token && HERE_STRING.has(token.op)) {
+      hereStringIsNext = true
+    } else if ('op' in token) {
+      const output = endStage()
+      fed = PIPES.has(token.op) ? output : null
+      words = []
     }
-    if (!('op' in token)) continue
-    if (HERE_STRING.has(token.op)) {
-      hereStringIsNext = words.some(word => SHELLS.has(baseName(word)))
-      continue
-    }
-    const program = words.length > 0 ? baseName(words[0]) : ''
-    printed =
-      PIPE.has(token.op) && PRINTERS.has(program) ? words.slice(1) : null
-    words = []
   }
+  endStage()
   return scripts
 }
