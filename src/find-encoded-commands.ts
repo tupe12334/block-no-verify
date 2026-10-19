@@ -23,7 +23,8 @@ const ENCODED_COMMAND = 'encodedcommand'
  * @returns True for an `-EncodedCommand` spelling.
  */
 function isEncodedOption(word: string): boolean {
-  const trimmed = word.trim()
+  // .NET Trim() also strips U+0085 (NEL), which JS trim() keeps.
+  const trimmed = word.replace(/^[\s\u0085]+|[\s\u0085]+$/g, '')
   const lead = SWITCH_LEAD.exec(trimmed)
   if (lead === null) return false
   const name = trimmed.slice(lead[0].length).toLowerCase()

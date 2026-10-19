@@ -18,6 +18,7 @@ describe('findEncodedCommands', () => {
     'pwsh \u2014ec',
     'pwsh \u2015e',
     "pwsh ' -enc'",
+    "pwsh '\u0085-enc'",
     "'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe' -e",
     '"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -e',
     'pwsh-preview -e',
