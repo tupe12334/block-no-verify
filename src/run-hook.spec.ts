@@ -25,7 +25,7 @@ function makeEvent(overrides: Partial<HookEvent>): HookEvent {
 
 function makeSdk(): HookSdk {
   return {
-    respond: vi.fn().mockResolvedValue(undefined),
+    respond: vi.fn().mockResolvedValue(),
     block: vi.fn(makeBlockResponse),
     approve: vi.fn(makeApproveResponse),
   }
@@ -84,6 +84,42 @@ describe('runHook', () => {
     it('should approve a notification event with no tool', async () => {
       const sdk = makeSdk()
       const event = makeEvent({ event: 'notification', tool: null })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(false)
+      expect(sdk.approve).toHaveBeenCalled()
+    })
+
+    it('should block a notification event that carries a command but no tool name', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        event: 'notification',
+        tool: null,
+        input: { command: 'git commit --no-verify -m "wip"' },
+      })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(true)
+      expect(sdk.block).toHaveBeenCalled()
+    })
+
+    it('should approve a notification event with an empty command and no tool name', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        event: 'notification',
+        tool: null,
+        input: { command: '' },
+      })
+      const result = await runHook(event, sdk)
+      expect(result.blocked).toBe(false)
+      expect(sdk.approve).toHaveBeenCalled()
+    })
+
+    it('should approve a safe command that carries no tool name', async () => {
+      const sdk = makeSdk()
+      const event = makeEvent({
+        event: 'notification',
+        tool: null,
+        input: { command: 'git commit -m "safe"' },
+      })
       const result = await runHook(event, sdk)
       expect(result.blocked).toBe(false)
       expect(sdk.approve).toHaveBeenCalled()

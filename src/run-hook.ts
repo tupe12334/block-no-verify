@@ -22,8 +22,15 @@ const NON_TOOL_EVENTS = new Set<HookEvent['event']>([
  * Claude Code `PreToolUse` event piped without its `hook_event_name`), polyhook
  * falls back to labelling the event `notification` while still extracting the
  * tool name and input. Treat such an event as a tool call too, as long as it
- * is not an explicit post-tool / session event and actually carries a tool —
- * genuine notifications have no tool and are left untouched.
+ * is not an explicit post-tool / session event and actually carries either a
+ * tool name or a command to inspect — genuine notifications have neither and
+ * are left untouched.
+ *
+ * The command check matters on its own: a payload sent without the
+ * caller-identifying envelope (e.g. `{"tool_input":{"command":"…"}}`) still
+ * yields the command via polyhook's fallback input extraction, but carries no
+ * tool name. Requiring a tool name there would approve a hook bypass purely
+ * because the caller could not be identified.
  * @param event - The normalized hook event.
  * @returns Whether the event should be checked for a hook bypass.
  */
@@ -37,7 +44,24 @@ function isToolCall(event: HookEvent): boolean {
   if (event.output !== null && event.output !== undefined) {
     return false
   }
-  return typeof event.tool === 'string' && event.tool.length > 0
+  if (typeof event.tool === 'string' && event.tool.length > 0) {
+    return true
+  }
+  return hasCommand(event)
+}
+
+/**
+ * Reports whether the event carries a non-empty shell command to inspect.
+ * @param event - The normalized hook event.
+ * @returns True when `input.command` is a non-empty string.
+ */
+function hasCommand(event: HookEvent): boolean {
+  const rawInput = event.input
+  if (rawInput === null || rawInput === undefined) {
+    return false
+  }
+  const command = rawInput.command
+  return typeof command === 'string' && command.length > 0
 }
 
 /**
