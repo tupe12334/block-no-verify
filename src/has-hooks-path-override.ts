@@ -1,3 +1,49 @@
+/** The config key that redirects the hooks directory, lowercased. */
+const HOOKS_PATH_KEY = 'core.hookspath'
+
+/**
+ * Strips surrounding quotes from a whitespace-split word, so a word taken from
+ * a quoted blob (`"git`, `/tmp"`) compares as its bare text.
+ * @param word - One whitespace-separated word.
+ * @returns The word without a leading or trailing quote.
+ */
+function unquote(word: string): string {
+  return word.replace(/^["']+/, '').replace(/["']+$/, '')
+}
+
+/**
+ * Checks for the space-separated `config [options] core.hooksPath <value>`
+ * form, requiring the key to follow the `config` word with only option words
+ * between them.
+ *
+ * Scanning for the word `config` and the key independently matched any command
+ * that merely mentioned both somewhere, so `echo 'core.hooksPath via -c and git
+ * config'` was blocked although it sets nothing (#130).
+ *
+ * Words are compared instead of matched with one regex: the option run needs a
+ * repeated group, and nesting quantifiers that way is a backtracking risk on
+ * attacker-supplied input.
+ * @param input - The command string to scan.
+ * @returns True when a `config` call sets core.hooksPath to a value.
+ */
+function setsHooksPathViaConfig(input: string): boolean {
+  const words = input
+    .split(/\s+/)
+    .map(unquote)
+    .filter(word => word.length > 0)
+  return words.some((word, index) => {
+    if (word.toLowerCase() !== 'config') return false
+    const rest = words.slice(index + 1)
+    const keyIndex = rest.findIndex(candidate => !candidate.startsWith('-'))
+    if (keyIndex === -1) return false
+    const [key, ...afterKey] = rest.slice(keyIndex)
+    if (key.toLowerCase() !== HOOKS_PATH_KEY) return false
+    // A bare read sets nothing, and a following statement is not a value.
+    if (afterKey.length === 0) return false
+    return !/^[;|&]/.test(afterKey[0])
+  })
+}
+
 /**
  * Checks if the input contains a -c core.hooksPath= override
  * which is used to bypass git hooks by redirecting the hooks directory.
@@ -37,9 +83,12 @@ export function hasHooksPathOverride(input: string): boolean {
   // value is set with a space instead of `=`. A bare read (no value, e.g.
   // `git config core.hooksPath` or `--get`/`--unset`) is intentionally not
   // matched since it does not redirect hooks.
-  if (/\bconfig\b/.test(input) && /core\.hookspath\s*[= ]\s*\S/i.test(input)) {
+  // An explicit assignment to the key sets it wherever it appears, so it needs
+  // no adjacent `config` word to be a bypass. The value must follow `=`
+  // directly: `core.hooksPath= issue` is prose, not an assignment.
+  if (/core\.hookspath=[^\s"';|&]/i.test(input)) {
     return true
   }
 
-  return false
+  return setsHooksPathViaConfig(input)
 }
