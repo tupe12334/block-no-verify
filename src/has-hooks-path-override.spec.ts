@@ -136,6 +136,37 @@ describe('hasHooksPathOverride', () => {
     it('should not detect a bare lowercase read', () => {
       expect(hasHooksPathOverride('git config core.hookspath')).toBe(false)
     })
+
+    // `config` and the key used to be tested independently, so any command
+    // mentioning both anywhere was blocked even when it set nothing (#130).
+    describe('prose mentioning config and the key (#130)', () => {
+      it.each([
+        "echo 'core.hooksPath via -c and git config'",
+        "echo 'git config and core.hooksPath = somewhere'",
+        "grep -rn config webpack.config.js && echo 'core.hooksPath'",
+        'git config --get core.hooksPath && echo done',
+        'git config --unset core.hooksPath',
+      ])('%s', command => {
+        expect(hasHooksPathOverride(command)).toBe(false)
+      })
+    })
+  })
+
+  // The space-separated set form still blocks, including through option words
+  // and a wrapper that runs the command (#130).
+  describe('still detects a config set of the key', () => {
+    it.each([
+      'git config core.hooksPath /dev/null',
+      'git config core.hooksPath "/tmp/a b"',
+      'git config --global core.hooksPath /tmp/h',
+      'git config --local core.hooksPath /tmp/h',
+      'git config core.hooksPath=/dev/null',
+      'sudo git config --system core.hooksPath /tmp',
+      'bash -c "git config core.hooksPath /tmp"',
+      "echo 'git config core.hooksPath /tmp' | sh",
+    ])('%s', command => {
+      expect(hasHooksPathOverride(command)).toBe(true)
+    })
   })
 
   // Git config keys are case-insensitive (#91).
