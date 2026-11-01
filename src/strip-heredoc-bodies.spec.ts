@@ -26,4 +26,38 @@ describe('stripHeredocBodies', () => {
     const result = stripHeredocBodies('cat <<EOF\nline one\nline two')
     expect(result).toBe('cat <<EOF')
   })
+
+  it('removes the body of a heredoc whose delimiter is backslash-quoted', () => {
+    const result = stripHeredocBodies('cat <<\\EOF\ngit push --no-verify\nEOF')
+    expect(result).toBe('cat <<\\EOF\nEOF')
+  })
+
+  it('keeps the body of a heredoc fed to a shell, which runs it', () => {
+    const body = 'bash <<EOF\ngit commit --no-verify -m x\nEOF'
+    expect(stripHeredocBodies(body)).toBe(body)
+    const sh = 'sh -s <<EOF\ngit push --no-verify\nEOF'
+    expect(stripHeredocBodies(sh)).toBe(sh)
+  })
+
+  it('removes the body of a shell heredoc given -c, which reads its operand', () => {
+    const result = stripHeredocBodies("bash -c 'cat' <<EOF\ngit commit\nEOF")
+    expect(result).toBe("bash -c 'cat' <<EOF\nEOF")
+  })
+
+  it('keeps the body when the shell is the last command before the heredoc', () => {
+    const body = 'cat x | bash <<EOF\ngit push --no-verify\nEOF'
+    expect(stripHeredocBodies(body)).toBe(body)
+  })
+
+  it('does not treat a here-string as a heredoc', () => {
+    const input = 'cat <<< "x"\ngit commit --no-verify'
+    expect(stripHeredocBodies(input)).toBe(input)
+  })
+
+  it('queues two heredoc bodies opened on one line', () => {
+    const result = stripHeredocBodies(
+      "cat <<A <<'B'\nx\nA\ny\nB\ngit push --no-verify"
+    )
+    expect(result).toBe("cat <<A <<'B'\nA\nB\ngit push --no-verify")
+  })
 })

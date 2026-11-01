@@ -1,6 +1,10 @@
+import { neutralizeLiteralSubstitutions } from './neutralize-literal-substitutions.js'
+
 /**
- * Rewrites two shell quoting forms that `shell-quote` tokenizes differently
- * from bash, before the string ever reaches `parse()`:
+ * Rewrites shell quoting forms that `shell-quote` tokenizes differently from
+ * bash, before the string ever reaches `parse()`. A `$(` or backtick that bash
+ * reads as literal text (in single quotes, or escaped) is neutralized, so it
+ * is not checked as a command substitution. The rewrites are:
  *
  * - `$'...'` / `$"..."` (ANSI-C / locale-specific quoting) — bash recognizes
  *   these only when the `$` starts a word (i.e. we are not already inside a
@@ -70,5 +74,5 @@ export function normalizeShellQuoting(input: string): string {
     result += char
   }
 
-  return result
+  return neutralizeLiteralSubstitutions(result)
 }
