@@ -387,4 +387,13 @@ describe('checkCommand', () => {
       expect(result.blocked).toBe(true)
     })
   })
+
+  describe('text piped into xargs with a -- before the flag', () => {
+    it('blocks a -n that xargs appends after a printf --', () => {
+      expect(
+        checkCommand('printf -- -n | xargs git commit -m x --allow-empty')
+          .blocked
+      ).toBe(true)
+    })
+  })
 })

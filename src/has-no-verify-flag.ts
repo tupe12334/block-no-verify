@@ -6,7 +6,8 @@ import { splitStatements } from './split-statements.js'
 import { extractNestedStatements } from './extract-nested-statements.js'
 import type { GitCommand } from './git-command.js'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
-import { COMMIT_SHORT_VALUE_OPTIONS } from './commit-short-options.js'
+import { readCommitShortBundle } from './commit-short-bundle.js'
+import { dropRedirectTargets } from './drop-redirect-targets.js'
 
 /**
  * Options that consume the following argv token as their value (a commit
@@ -28,9 +29,6 @@ const VALUE_OPTIONS = new Set([
   '--fixup',
   '--squash',
 ])
-
-/** The short-flag letter that enables `--no-verify` for `git commit`. */
-const NO_VERIFY_LETTERS = new Set(['n'])
 
 /**
  * Returns true when the token is the `git` program itself, tolerating a path
@@ -58,33 +56,6 @@ function isNoVerifyAbbreviation(token: string): boolean {
 }
 
 /**
- * Returns true when a single-dash short-flag bundle (e.g. `-n`, `-nm`, `-vn`)
- * contains the `-n` (`--no-verify`) flag. Scanning stops at the first letter
- * that takes a value, required or optional-inline (see
- * commit-short-options.ts): the rest of the token is that option's value, so
- * `-mn`, `-tn`, `-uno` and `-Skeyn` do not enable `--no-verify`.
- * @param token - The argv token to inspect.
- * @returns True when the bundle enables `--no-verify`.
- */
-function isShortNoVerifyBundle(token: string): boolean {
-  if (!/^-[a-zA-Z]+$/.test(token)) {
-    return false
-  }
-  for (const letter of token.slice(1)) {
-    if (NO_VERIFY_LETTERS.has(letter)) {
-      return true
-    }
-    if (
-      COMMIT_SHORT_VALUE_OPTIONS.required.has(letter) ||
-      COMMIT_SHORT_VALUE_OPTIONS.optionalInline.has(letter)
-    ) {
-      return false
-    }
-  }
-  return false
-}
-
-/**
  * Scans one statement's argv tokens for a --no-verify bypass of `command`.
  * The value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
  * `--no-verify` or `-n` appearing inside a commit message body is not
@@ -101,7 +72,7 @@ function statementHasNoVerifyFlag(
 ): boolean {
   let skipNext = false
 
-  for (const token of statement) {
+  for (const [index, token] of statement.entries()) {
     if (skipNext) {
       skipNext = false
       continue
@@ -120,9 +91,14 @@ function statementHasNoVerifyFlag(
 
     // For commit, -n is shorthand for --no-verify. For push (-n = --dry-run),
     // merge (-n = --no-commit), etc. it means something else, so only commit.
-    if (command === 'commit' && isShortNoVerifyBundle(token)) {
+    if (command !== 'commit') continue
+    const bundle = readCommitShortBundle(token)
+    if (bundle === null) continue
+    if (bundle.enablesNoVerify) {
       return true
     }
+    // A value letter ending the bundle (`-am`) takes the next token.
+    skipNext = bundle.takesNextToken
   }
 
   return false
@@ -182,7 +158,7 @@ export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
   // findLiveSubstitutions).
   const substitutions = findLiveSubstitutions(preprocessCommand(input))
   const statements = [
-    ...splitStatements(tokens),
+    ...splitStatements(dropRedirectTargets(tokens)),
     ...extractNestedStatements(tokens),
     ...substitutions.flatMap(text => splitStatements(tokenizeCommand(text))),
   ]
