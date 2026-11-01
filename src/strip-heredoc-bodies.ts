@@ -83,6 +83,32 @@ function hasLiveExpansion(line: string): boolean {
 }
 
 /**
+ * Matches a line that is only a plain `cat` reading one heredoc, with no pipe,
+ * redirect or other command: `cat <<'EOF'`, `cat <<\EOF`.
+ */
+const PLAIN_CAT_HEREDOC = /^\s*cat\s+<<-?\s*\\?['"]?\w+['"]?\s*$/
+
+/**
+ * Chooses what to keep of a heredoc body. A shell that runs it keeps all of it.
+ * A quoted body of a plain `cat` is data and is dropped. Any other quoted
+ * body is kept, because its consumer may execute it (`cat <<\EOF | bash`,
+ * `tee s.sh <<\EOF`). An unquoted body keeps only its substitution lines.
+ * @param line - The line that opens the heredoc.
+ * @param index - The offset of the heredoc operator in the line.
+ * @param quoted - True when the delimiter is quoted or escaped.
+ * @returns What to keep of the body.
+ */
+function keepMode(
+  line: string,
+  index: number | undefined,
+  quoted: boolean
+): PendingBody['keep'] {
+  if (feedsShell(line.slice(0, index))) return 'all'
+  if (!quoted) return 'expansions'
+  return PLAIN_CAT_HEREDOC.test(line) ? 'none' : 'all'
+}
+
+/**
  * Removes heredoc body lines from a command string before it reaches
  * `shell-quote`. A heredoc body is free-form text terminated by a line that
  * matches the delimiter exactly (ignoring leading tabs for `<<-`). A body fed
@@ -117,11 +143,7 @@ export function stripHeredocBodies(input: string): string {
       queue.push({
         delimiter: word.replace(/\\(.)|['"]/g, '$1'),
         stripTabs: match[1] === '-',
-        keep: feedsShell(line.slice(0, match.index))
-          ? 'all'
-          : quoted
-            ? 'none'
-            : 'expansions',
+        keep: keepMode(line, match.index, quoted),
       })
     }
   }

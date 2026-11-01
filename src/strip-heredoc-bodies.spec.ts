@@ -58,6 +58,13 @@ describe('stripHeredocBodies', () => {
     const result = stripHeredocBodies(
       "cat <<A <<'B'\nx\nA\ny\nB\ngit push --no-verify"
     )
-    expect(result).toBe("cat <<A <<'B'\nA\nB\ngit push --no-verify")
+    // Only the unquoted body loses its plain lines. The quoted body is kept,
+    // because a line that is not a plain `cat` may hand it to a shell.
+    expect(result).toBe("cat <<A <<'B'\nA\ny\nB\ngit push --no-verify")
+  })
+
+  it('keeps a quoted heredoc body whose consumer is not a plain cat', () => {
+    const input = 'cat <<\\EOF | bash\ngit push --no-verify\nEOF'
+    expect(stripHeredocBodies(input)).toBe(input)
   })
 })

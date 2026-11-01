@@ -1,4 +1,32 @@
+import { parse } from 'shell-quote'
 import { neutralizeLiteralSubstitutions } from './neutralize-literal-substitutions.js'
+
+/** Programs whose arguments are printed, and never run. */
+const PRINTERS = new Set(['echo', 'printf', 'cat'])
+
+/**
+ * Returns true when the text is one printing statement and nothing else: no
+ * newline, operator, pipe, redirect or substitution, and an `echo`, `printf` or
+ * `cat` program. Only such text may have its literal substitutions neutralized,
+ * because any other text may hand it to a shell (`bash -c`, `eval`, `source`,
+ * a pipe) that runs it.
+ * @param text - The normalized command string.
+ * @returns True when the text is one printing statement.
+ */
+function isSingleDataStatement(text: string): boolean {
+  if (text.includes('\n')) return false
+  try {
+    const tokens = parse(text)
+    const [program] = tokens
+    return (
+      tokens.every(token => typeof token === 'string') &&
+      typeof program === 'string' &&
+      PRINTERS.has(program)
+    )
+  } catch {
+    return false
+  }
+}
 
 /**
  * Rewrites shell quoting forms that `shell-quote` tokenizes differently from
@@ -74,5 +102,7 @@ export function normalizeShellQuoting(input: string): string {
     result += char
   }
 
-  return neutralizeLiteralSubstitutions(result)
+  return isSingleDataStatement(result)
+    ? neutralizeLiteralSubstitutions(result)
+    : result
 }

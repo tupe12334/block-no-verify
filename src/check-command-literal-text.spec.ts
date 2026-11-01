@@ -13,7 +13,6 @@ describe('checkCommand literal shell text', () => {
       "bash -c 'cat' <<EOF\ngit commit -q -m x\nEOF",
       "cat <<'A'\n$(git push --no-verify)\nA",
       'cat <<A\nsafe\nA',
-      "cat <<A <<'B'\nsafe\nA\n$(git push --no-verify)\nB",
     ])('allows %j', command => {
       expect(checkCommand(command).blocked).toBe(false)
     })
