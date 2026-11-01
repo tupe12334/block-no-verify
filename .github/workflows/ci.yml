@@ -33,15 +33,23 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
+        # Dev tooling needs Node 20+; Node 18 only checks the build and tests.
+        if: matrix.node-version != 18
         run: pnpm lint
 
       - name: Format check
+        # Dev tooling needs Node 20+; Node 18 only checks the build and tests.
+        if: matrix.node-version != 18
         run: pnpm format:check
 
       - name: Spell check
+        # Dev tooling needs Node 20+; Node 18 only checks the build and tests.
+        if: matrix.node-version != 18
         run: pnpm spell
 
       - name: Check for unused code
+        # Dev tooling needs Node 20+; Node 18 only checks the build and tests.
+        if: matrix.node-version != 18
         run: pnpm knip
 
       - name: Check file line limits
