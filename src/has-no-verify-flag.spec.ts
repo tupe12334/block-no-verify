@@ -1,3 +1,4 @@
+// cspell:ignore Skeyn keyn keyid
 import { describe, it, expect } from 'vitest'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
 
@@ -376,6 +377,39 @@ describe('hasNoVerifyFlag', () => {
           'commit'
         )
       ).toBe(false)
+    })
+  })
+
+  describe('bundled short options that take a value (inline or optional)', () => {
+    // A value-taking letter (-t, -m, -F, -C, -c) or an optional inline value
+    // (-u[<mode>], -S[<keyid>]) ends the bundle: the rest is its value.
+    it('allows -n after -t in a bundle (-tn is --template=n)', () => {
+      expect(hasNoVerifyFlag('git commit -tn -m x', 'commit')).toBe(false)
+    })
+
+    it('allows -n after -u in a bundle (-uno is --untracked-files=no)', () => {
+      expect(hasNoVerifyFlag('git commit -uno -m x', 'commit')).toBe(false)
+    })
+
+    it('allows -n after -S in a bundle (-Skeyn is --gpg-sign=keyn)', () => {
+      expect(hasNoVerifyFlag('git commit -Skeyn -m x', 'commit')).toBe(false)
+    })
+
+    it('still blocks -n bundled before a value letter', () => {
+      expect(hasNoVerifyFlag('git commit -n -m x', 'commit')).toBe(true)
+      expect(hasNoVerifyFlag('git commit -qn -m x', 'commit')).toBe(true)
+      expect(hasNoVerifyFlag('git commit -nq -m x', 'commit')).toBe(true)
+      expect(hasNoVerifyFlag('git commit -an -m x', 'commit')).toBe(true)
+    })
+
+    it('still blocks -n as a separate token after an optional-value flag', () => {
+      expect(hasNoVerifyFlag('git commit -S -n -m x', 'commit')).toBe(true)
+      expect(hasNoVerifyFlag('git commit -u -n -m x', 'commit')).toBe(true)
+    })
+
+    it('skips the separate value token of -t', () => {
+      expect(hasNoVerifyFlag('git commit -t -n', 'commit')).toBe(false)
+      expect(hasNoVerifyFlag('git commit --template -n', 'commit')).toBe(false)
     })
   })
 })
