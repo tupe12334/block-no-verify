@@ -8,7 +8,7 @@ const PARAMS = `GIT_CONFIG_PARAMETERS="'${HP}=/dev/null'"`
 const COMMIT = 'git commit -m x --allow-empty'
 
 describe('hasHooksPathOverride scope', () => {
-  describe('allows an override that cannot reach a hook-running git command', () => {
+  describe('blocks an override that main blocks (hardening: no relaxation)', () => {
     it.each([
       `${OVERRIDE} git status`,
       `${OVERRIDE} echo 'git push --no-verify'`,
@@ -18,8 +18,8 @@ describe('hasHooksPathOverride scope', () => {
       `git --config-env=${HP}=HP status`,
       `echo 'HP=/dev/null git --config-env=${HP}=HP commit'`,
       `export ${PARAMS}; git status`,
-    ])('allows %j', command => {
-      expect(hasHooksPathOverride(command)).toBe(false)
+    ])('blocks %j', command => {
+      expect(hasHooksPathOverride(command)).toBe(true)
     })
   })
 
