@@ -412,4 +412,67 @@ describe('hasNoVerifyFlag', () => {
       expect(hasNoVerifyFlag('git commit --template -n', 'commit')).toBe(false)
     })
   })
+
+  describe('argv words that git does not read as a flag', () => {
+    // Bash and git rules: a value option (-m, -F, ...) consumes the next word
+    // even when it ends a bundle (-am), `--` ends option parsing, and a
+    // redirect operand is a file name, not an argument.
+    it('does not read the message of -am as a flag', () => {
+      expect(hasNoVerifyFlag('git commit -am "--no-verify"', 'commit')).toBe(
+        false
+      )
+      expect(hasNoVerifyFlag('git commit -am "-n"', 'commit')).toBe(false)
+    })
+
+    it('reads a flag after the message of -am as a flag', () => {
+      expect(hasNoVerifyFlag('git commit -am "x" --no-verify', 'commit')).toBe(
+        true
+      )
+    })
+
+    it('reads a flag after -- when -am takes -- as its message', () => {
+      expect(hasNoVerifyFlag('git commit -am -- --no-verify', 'commit')).toBe(
+        true
+      )
+    })
+
+    it('does not read words after -- as flags', () => {
+      expect(hasNoVerifyFlag('git commit -- --no-verify', 'commit')).toBe(false)
+      expect(hasNoVerifyFlag('git commit -- -n', 'commit')).toBe(false)
+    })
+
+    it('still reads a flag before -- as a flag', () => {
+      expect(
+        hasNoVerifyFlag('git commit --no-verify -- file.txt', 'commit')
+      ).toBe(true)
+    })
+
+    it('reads a git flag after the -- of another program', () => {
+      expect(
+        hasNoVerifyFlag('command -- git commit --no-verify', 'commit')
+      ).toBe(true)
+    })
+
+    it('does not read a redirect file name as a flag', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m safe > --no-verify', 'commit')
+      ).toBe(false)
+      expect(
+        hasNoVerifyFlag('git commit -m safe 2> --no-verify', 'commit')
+      ).toBe(false)
+    })
+
+    it('still reads a flag after a redirect operand', () => {
+      expect(
+        hasNoVerifyFlag('git commit -m x > /dev/null --no-verify', 'commit')
+      ).toBe(true)
+      expect(hasNoVerifyFlag('git commit 2>/dev/null -n', 'commit')).toBe(true)
+    })
+
+    it('does not run git when its program word keeps a backslash', () => {
+      expect(hasNoVerifyFlag('"git""\\.exe" commit -n -m x', 'commit')).toBe(
+        false
+      )
+    })
+  })
 })
