@@ -52,6 +52,12 @@ function isSingleDataStatement(text: string): boolean {
 export function normalizeShellQuoting(input: string): string {
   let result = ''
   let state: 'outside' | 'single' | 'double' = 'outside'
+  // ANSI-C quoting is rewritten to plain quoting without expanding its
+  // escapes, so `$'\''` (a lone quote character) turns into quote marks that
+  // bash would not see. Quote pairs in the result can then differ from bash,
+  // and a live substitution could look quoted. Literal neutralization is
+  // skipped for such input, so every substitution stays checked.
+  let sawAnsiCQuoting = false
 
   for (let i = 0; i < input.length; i++) {
     const char = input.charAt(i)
@@ -85,6 +91,7 @@ export function normalizeShellQuoting(input: string): string {
 
     // Outside any quotes: ANSI-C/locale quoting only starts a word here.
     if (char === '$' && (next === "'" || next === '"')) {
+      sawAnsiCQuoting = true
       continue
     }
 
@@ -102,7 +109,7 @@ export function normalizeShellQuoting(input: string): string {
     result += char
   }
 
-  return isSingleDataStatement(result)
+  return !sawAnsiCQuoting && isSingleDataStatement(result)
     ? neutralizeLiteralSubstitutions(result)
     : result
 }
