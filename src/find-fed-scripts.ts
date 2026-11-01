@@ -1,4 +1,5 @@
 import { codeLiterals } from './code-literals.js'
+import { findXargsCommands } from './find-xargs-commands.js'
 import { isInterpreter } from './is-interpreter.js'
 import { stdinIsCode } from './stdin-is-code.js'
 import { tokenizeCommand } from './tokenize-command.js'
@@ -75,7 +76,8 @@ function programIndex(words: string[]): number {
  * - `echo '…' | sh`, `printf '…' | sudo bash`, `echo '…' | tee x | sh`: the
  *   printed arguments, carried through `cat`/`tee`/`head`/`tail` stages;
  * - `sh <<< '…'` and `cat <<< '…' | sh`: the here-string;
- * - the same fed to python/perl/ruby/node: the code's string literals.
+ * - the same fed to python/perl/ruby/node: the code's string literals;
+ * - `echo '…' | xargs …`: the commands xargs runs with the text as arguments.
  * A printed argument that is only an option or a printf format is checked
  * too, which can only widen the scan.
  * @param input - The raw command string.
@@ -99,6 +101,10 @@ export function findFedScripts(input: string): string[] {
     const args = words.slice(index + 1).filter(word => word !== hereString?.[0])
     if (stdin !== null && isInterpreter(program) && stdinIsCode(args)) {
       scripts.push(...codeLiterals(stdin.join(' '), program))
+    }
+    // xargs runs its command with the piped text as arguments (#101).
+    if (stdin !== null && program === 'xargs') {
+      scripts.push(...findXargsCommands(args, stdin.join(' ')))
     }
     words = words.slice(index + 1)
     hereString = null
