@@ -1,13 +1,16 @@
+// cspell:ignore Skeyn keyn
 import { tokenizeCommand } from './tokenize-command.js'
 import { splitStatements } from './split-statements.js'
 import { extractNestedStatements } from './extract-nested-statements.js'
 import type { GitCommand } from './git-command.js'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
+import { COMMIT_SHORT_VALUE_OPTIONS } from './commit-short-options.js'
 
 /**
  * Options that consume the following argv token as their value (a commit
- * message, a message file, or a commit to reuse/re-edit). The value of these
- * options is user text and must never be scanned for hook-bypass flags.
+ * message, a message file, a template file, or a commit to reuse/re-edit). The
+ * value of these options is user text and must never be scanned for hook-bypass
+ * flags.
  */
 const VALUE_OPTIONS = new Set([
   '-m',
@@ -18,16 +21,11 @@ const VALUE_OPTIONS = new Set([
   '--reuse-message',
   '-c',
   '--reedit-message',
+  '-t',
+  '--template',
   '--fixup',
   '--squash',
 ])
-
-/**
- * Short option letters that consume the rest of a short-flag bundle as their
- * value. A `n` appearing after one of these in a bundle is part of a value, not
- * the `-n` (`--no-verify`) flag.
- */
-const SHORT_VALUE_LETTERS = new Set(['m', 'F', 'C', 'c'])
 
 /** The short-flag letter that enables `--no-verify` for `git commit`. */
 const NO_VERIFY_LETTERS = new Set(['n'])
@@ -59,9 +57,10 @@ function isNoVerifyAbbreviation(token: string): boolean {
 
 /**
  * Returns true when a single-dash short-flag bundle (e.g. `-n`, `-nm`, `-vn`)
- * contains the `-n` (`--no-verify`) flag. A `n` that follows a value-consuming
- * letter such as `m` (e.g. `-mn`, where `n` is part of the message) does not
- * count.
+ * contains the `-n` (`--no-verify`) flag. Scanning stops at the first letter
+ * that takes a value, required or optional-inline (see
+ * commit-short-options.ts): the rest of the token is that option's value, so
+ * `-mn`, `-tn`, `-uno` and `-Skeyn` do not enable `--no-verify`.
  * @param token - The argv token to inspect.
  * @returns True when the bundle enables `--no-verify`.
  */
@@ -73,7 +72,10 @@ function isShortNoVerifyBundle(token: string): boolean {
     if (NO_VERIFY_LETTERS.has(letter)) {
       return true
     }
-    if (SHORT_VALUE_LETTERS.has(letter)) {
+    if (
+      COMMIT_SHORT_VALUE_OPTIONS.required.has(letter) ||
+      COMMIT_SHORT_VALUE_OPTIONS.optionalInline.has(letter)
+    ) {
       return false
     }
   }
