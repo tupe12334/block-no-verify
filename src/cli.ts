@@ -1,8 +1,23 @@
 #!/usr/bin/env node
 /* eslint-disable ddd/require-spec-file */
-import { read, respond, block, approve } from '@polyhook/sdk'
+import { createRequire } from 'node:module'
+import type { HookEvent, HookResponse } from '@polyhook/sdk'
 import { EXIT_CODES } from './exit-codes.js'
 import { runHook } from './run-hook.js'
+
+interface PolyhookSdk {
+  read: () => Promise<HookEvent>
+  respond: (r: HookResponse) => Promise<void>
+  block: (message: string) => HookResponse
+  approve: () => HookResponse
+}
+
+// ponytail: load the SDK's CommonJS entry. Its ESM entry (dist/index.js) has no
+// "type": "module" and Node 18 cannot parse it, so the ESM import fails there.
+const requireSdk = createRequire(import.meta.url)
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- createRequire returns any; typed here against the SDK surface
+const sdk: PolyhookSdk = requireSdk('@polyhook/sdk')
+const { read, respond, block, approve } = sdk
 
 /**
  * Entry point: reads a polyhook event from stdin and responds via the SDK.

@@ -1,6 +1,6 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import { issuesUrl } from './package-info.js'
-import { MissingBugsUrlError } from './missing-bugs-url-error.js'
 
 describe('issuesUrl', () => {
   it('returns the project bug tracker new-issue URL', () => {
@@ -8,13 +8,15 @@ describe('issuesUrl', () => {
       'https://github.com/tupe12334/block-no-verify/issues/new'
     )
   })
-})
 
-describe('MissingBugsUrlError', () => {
-  it('is an Error with a descriptive message', () => {
-    const error = new MissingBugsUrlError()
-    expect(error).toBeInstanceOf(Error)
-    expect(error.name).toBe('MissingBugsUrlError')
-    expect(error.message).toContain('bugs.url')
+  it('matches package.json bugs.url', () => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed path relative to this spec, never user input
+    const raw = readFileSync(
+      new URL('../package.json', import.meta.url),
+      'utf8'
+    )
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- package.json shape is asserted by the expect below
+    const pkg: { bugs: { url: string } } = JSON.parse(raw)
+    expect(issuesUrl()).toBe(`${pkg.bugs.url}/new`)
   })
 })

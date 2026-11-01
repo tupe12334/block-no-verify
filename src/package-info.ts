@@ -1,30 +1,16 @@
-import { readFileSync } from 'node:fs'
-import { MissingBugsUrlError } from './missing-bugs-url-error.js'
+/**
+ * Canonical "open a new issue" URL, shown in the block message.
+ *
+ * A literal, not read from package.json: the package ships as ESM and CommonJS,
+ * and `import.meta.url` (used before for this) is rejected by the CommonJS build.
+ * package-info.spec.ts asserts this matches package.json `bugs.url`.
+ */
+// eslint-disable-next-line default/no-hardcoded-urls -- canonical issue tracker, kept in sync with package.json by package-info.spec.ts
+const ISSUES_NEW_URL = 'https://github.com/tupe12334/block-no-verify/issues/new'
 
 /**
- * Reads the project's bug tracker URL from the root package.json so the block
- * message points at the canonical issue tracker without duplicating the URL.
- *
- * Resolved relative to this module: at runtime the compiled file lives in
- * dist/, and under tests it lives in src/ — in both cases ../package.json
- * resolves to the package root.
  * @returns The "open a new issue" URL for the project repository.
- * @throws {MissingBugsUrlError} When package.json has no usable bugs.url.
  */
 export function issuesUrl(): string {
-  const pkgUrl = new URL('../package.json', import.meta.url)
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from this module's own location, never from user input
-  const pkg: unknown = JSON.parse(readFileSync(pkgUrl, 'utf8'))
-
-  if (typeof pkg === 'object' && pkg !== null && 'bugs' in pkg) {
-    const bugs = pkg.bugs
-    if (typeof bugs === 'object' && bugs !== null && 'url' in bugs) {
-      const url = bugs.url
-      if (typeof url === 'string' && url !== '') {
-        return `${url}/new`
-      }
-    }
-  }
-
-  throw new MissingBugsUrlError()
+  return ISSUES_NEW_URL
 }
