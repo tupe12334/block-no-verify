@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: [18, 20, 22]
 
@@ -62,7 +63,13 @@ jobs:
         run: pnpm build
 
       - name: Run tests with coverage
+        if: matrix.node-version != 18
         run: pnpm test:coverage --run
+
+      - name: Run tests
+        # The coverage provider needs node:inspector/promises (Node 19+).
+        if: matrix.node-version == 18
+        run: pnpm test --run
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
