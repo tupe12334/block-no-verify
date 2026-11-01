@@ -1,15 +1,8 @@
 import { tokenizeCommand } from './tokenize-command.js'
+import { splitStatements } from './split-statements.js'
+import { extractNestedStatements } from './extract-nested-statements.js'
 import type { GitCommand } from './git-command.js'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
-
-type ParseToken = ReturnType<typeof tokenizeCommand>[number]
-
-/**
- * Shell control operators that end the current statement. Redirection
- * operators (`>`, `<`, `>>`, …) are deliberately absent: they do not start a
- * new command, so their operands stay with the statement being scanned.
- */
-const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
 
 /**
  * Options that consume the following argv token as their value (a commit
@@ -38,32 +31,6 @@ const SHORT_VALUE_LETTERS = new Set(['m', 'F', 'C', 'c'])
 
 /** The short-flag letter that enables `--no-verify` for `git commit`. */
 const NO_VERIFY_LETTERS = new Set(['n'])
-
-/**
- * Splits a parsed token stream into statements at control operators. The
- * split happens on `shell-quote`'s operator tokens rather than on raw
- * characters, so a `;`, `|`, or `&` inside a quoted string (e.g. a commit
- * message) never breaks the statement that carries it. Non-string tokens
- * (operators, globs, comments) are dropped from the statements themselves.
- * Unquoted newlines are whitespace to `shell-quote`, so newline-separated
- * commands land in one statement — that can only over-scan (a safe
- * false-positive direction), never hide a flag.
- * @param tokens - The parsed token stream for the full input.
- * @returns The statements, each an array of string argv tokens.
- */
-function splitStatements(tokens: ParseToken[]): string[][] {
-  const statements: string[][] = [[]]
-  for (const token of tokens) {
-    if (typeof token === 'string') {
-      statements[statements.length - 1].push(token)
-      continue
-    }
-    if ('op' in token && CONTROL_OPERATORS.has(token.op)) {
-      statements.push([])
-    }
-  }
-  return statements
-}
 
 /**
  * Returns true when the token is the `git` program itself, tolerating a path
@@ -180,24 +147,36 @@ function statementCommand(statement: string[]): GitCommand | null {
  * The input is normalized for ANSI-C/locale quoting and line continuations
  * (#78), then tokenized once with `shell-quote` after best-effort
  * `NAME=value` variable expansion (e.g. `c=push; git $c --no-verify`), and
- * split into statements at control-operator tokens (`;`, `&&`, `|`, …).
- * Each statement that invokes a guarded git sub-command is scanned against its
- * own sub-command, so a `-n` belonging to a chained `echo`, `grep`, or `head` is
- * not mistaken for git's `--no-verify` (#70), while a real bypass in any
- * git-invoking statement of the same line — even one for a different
- * guarded sub-command than `command` (e.g. `git commit -m "x" && git push
- * --no-verify`) — is still caught. Because the split works on parsed
- * tokens, a separator character inside a quoted commit message cannot break
- * the statement apart and smuggle the flag past the scan. When no statement
- * resolves to a guarded sub-command (the detector saw `command` through a
- * construct this token-level check cannot), every statement is scanned
- * against `command` as before — erring toward blocking.
+ * split into statements at control-operator tokens (`;`, `&&`, `|`, …) via
+ * {@link splitStatements}. `shell-quote` also leaves a command substitution
+ * written inside a quoted word (e.g. `echo "$(git commit --no-verify)"`) as
+ * one opaque string instead of its own statement (#81); those are recovered
+ * separately by {@link extractNestedStatements} and scanned the same way,
+ * which cannot distinguish an inert single-quoted `'$(...)'` literal from an
+ * executed double-quoted one — an intentional over-scan, since it can only
+ * report a false bypass, never miss a real one. Each statement that invokes
+ * a guarded git sub-command is scanned against its own sub-command, so a
+ * `-n` belonging to a chained `echo`, `grep`, or `head` is not mistaken for
+ * git's `--no-verify` (#70), while a real bypass in any git-invoking
+ * statement of the same line — even one for a different guarded sub-command
+ * than `command` (e.g. `git commit -m "x" && git push --no-verify`) — is
+ * still caught. Because the split works on parsed tokens, a separator
+ * character inside a quoted commit message cannot break the statement apart
+ * and smuggle the flag past the scan.
+ *
+ * When no statement resolves to a guarded sub-command (the detector saw
+ * `command` through a construct this token-level check cannot), every
+ * statement is scanned against `command` as before — erring toward blocking.
  * @param input - The command string to scan.
  * @param command - The detected git sub-command.
  * @returns True when the command string contains a flag that bypasses hooks.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
-  const statements = splitStatements(tokenizeCommand(input))
+  const tokens = tokenizeCommand(input)
+  const statements = [
+    ...splitStatements(tokens),
+    ...extractNestedStatements(tokens),
+  ]
   let anyGitStatement = false
   for (const statement of statements) {
     const cmd = statementCommand(statement)
