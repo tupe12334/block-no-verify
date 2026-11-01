@@ -95,6 +95,10 @@ export function findFedScripts(input: string): string[] {
     const program = index === -1 ? '' : baseName(words.slice(index)[0])
     const stdin = hereString !== null ? hereString : fed
     if (stdin !== null && SHELLS.has(program)) scripts.push(stdin.join(' '))
+    // `read VAR <<< '…'` stores the text in VAR, which a later `$VAR` may run.
+    if (hereString !== null && program === 'read') {
+      scripts.push(hereString.join(' '))
+    }
     // Code fed to an interpreter runs git from its string literals; with a
     // script or code option, stdin is only data.
     // The here-string word is the code itself, not a script operand.

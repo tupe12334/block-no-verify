@@ -1,5 +1,7 @@
 // cspell:ignore Skeyn keyn
+import { preprocessCommand } from './preprocess-command.js'
 import { tokenizeCommand } from './tokenize-command.js'
+import { findLiveSubstitutions } from './find-live-substitutions.js'
 import { splitStatements } from './split-statements.js'
 import { extractNestedStatements } from './extract-nested-statements.js'
 import type { GitCommand } from './git-command.js'
@@ -175,9 +177,14 @@ function statementCommand(statement: string[]): GitCommand | null {
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
   const tokens = tokenizeCommand(input)
+  // Backtick and `$(…)` spans that bash runs are scanned on the raw text, since
+  // shell-quote splits a backtick span into several words (see
+  // findLiveSubstitutions).
+  const substitutions = findLiveSubstitutions(preprocessCommand(input))
   const statements = [
     ...splitStatements(tokens),
     ...extractNestedStatements(tokens),
+    ...substitutions.flatMap(text => splitStatements(tokenizeCommand(text))),
   ]
   let anyGitStatement = false
   for (const statement of statements) {

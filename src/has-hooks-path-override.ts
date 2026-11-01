@@ -11,7 +11,9 @@ import { hasEnvOverrideThatRuns } from './hooks-path-env-scope.js'
 export function hasHooksPathOverride(input: string): boolean {
   // Match: -c core.hooksPath=<value> with optional quotes around the value
   // Handles: -c core.hooksPath=/dev/null, -c "core.hooksPath=", -c 'core.hooksPath=/tmp'
-  if (/-c\s+["']?core\.hookspath\s*=/i.test(input)) {
+  // Words between `-c` and the key are allowed: a redirection there
+  // (`git -c > f core.hooksPath=…`) does not stop git reading the key.
+  if (/-c\s[^;&|()]*?["']?core\.hookspath\s*=/i.test(input)) {
     return true
   }
 

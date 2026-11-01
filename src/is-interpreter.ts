@@ -1,5 +1,9 @@
-/** Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php, lua. */
-const INTERPRETER = /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua)$/
+/**
+ * Matches an interpreter name: python3.12, perl, ruby, node, bun, deno, php,
+ * lua, and osascript (AppleScript `do shell script "…"`).
+ */
+const INTERPRETER =
+  /^(?:python[\d.]*|perl|ruby|node|nodejs|bun|deno|php|lua|osascript)$/
 
 /**
  * Tells whether a program name is a code interpreter whose string literals
