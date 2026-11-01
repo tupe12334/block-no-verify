@@ -25,6 +25,30 @@ describe('checkCommand: text that a shell later runs is blocked', () => {
     ['escaped backtick to bash -c', `bash -c "echo \\${BT}"`],
     ['escaped dollar-paren to bash -c', `bash -c "echo \\$(${BODY})"`],
     ['echo with $# before a quote and a newline', `echo $#'\n${BT}'`],
+    [
+      'cat heredoc in $() fed to sh -c',
+      `sh -c "$(\ncat <<\\EOF\n${BODY}\nEOF\n)"`,
+    ],
+    [
+      'cat heredoc in $() fed to bash -c',
+      `bash -c "$(\ncat <<'EOF'\n${BODY}\nEOF\n)"`,
+    ],
+    [
+      'cat heredoc in $() fed to eval',
+      `eval "$(\ncat <<'EOF'\n${BODY}\nEOF\n)"`,
+    ],
+    [
+      'cat heredoc in backticks fed to sh -c',
+      `sh -c "\`\ncat <<'EOF'\n${BODY}\nEOF\n\`"`,
+    ],
+    [
+      'cat heredoc in process substitution',
+      `bash <(\ncat <<'EOF'\n${BODY}\nEOF\n)`,
+    ],
+    [
+      'cat heredoc in a subshell piped to sh',
+      `(\ncat <<'EOF'\n${BODY}\nEOF\n) | sh`,
+    ],
   ])('blocks %s', (_name, command) => {
     expect(checkCommand(command).blocked).toBe(true)
   })

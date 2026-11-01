@@ -96,16 +96,31 @@ const PLAIN_CAT_HEREDOC = /^\s*cat\s+<<-?\s*\\?['"]?\w+['"]?\s*$/
  * @param line - The line that opens the heredoc.
  * @param index - The offset of the heredoc operator in the line.
  * @param quoted - True when the delimiter is quoted or escaped.
+ * @param standalone - True when the input has no substitution, pipe or redirect.
  * @returns What to keep of the body.
  */
 function keepMode(
   line: string,
   index: number | undefined,
-  quoted: boolean
+  quoted: boolean,
+  standalone: boolean
 ): PendingBody['keep'] {
   if (feedsShell(line.slice(0, index))) return 'all'
   if (!quoted) return 'expansions'
-  return PLAIN_CAT_HEREDOC.test(line) ? 'none' : 'all'
+  return standalone && PLAIN_CAT_HEREDOC.test(line) ? 'none' : 'all'
+}
+
+/**
+ * Returns true when the whole input is a plain heredoc read: no substitution,
+ * pipe, list operator, grouping or redirect other than the heredoc operator
+ * itself. Only then is the output of a `cat` body certainly not run. A `cat`
+ * whose output is captured by `$(…)`, piped, or passed to a process
+ * substitution is code once a shell runs it.
+ * @param input - The raw command string.
+ * @returns True when the input has no such operator.
+ */
+function isStandaloneInput(input: string): boolean {
+  return !/\$\(|`|<\(|>\(|[|;&<>()]/.test(input.replace(/<<-?/g, ''))
 }
 
 /**
@@ -125,6 +140,7 @@ export function stripHeredocBodies(input: string): string {
   const lines = input.split('\n')
   const result: string[] = []
   const queue: PendingBody[] = []
+  const standalone = isStandaloneInput(input)
 
   for (const line of lines) {
     if (queue.length > 0) {
@@ -143,7 +159,7 @@ export function stripHeredocBodies(input: string): string {
       queue.push({
         delimiter: word.replace(/\\(.)|['"]/g, '$1'),
         stripTabs: match[1] === '-',
-        keep: keepMode(line, match.index, quoted),
+        keep: keepMode(line, match.index, quoted, standalone),
       })
     }
   }
