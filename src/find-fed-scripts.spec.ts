@@ -31,6 +31,13 @@ describe('findFedScripts', () => {
     // sudo -s and -k are flags, not value options.
     ["echo 'git status' | sudo -s sh", ['git status']],
     ["echo 'git status' | sudo -E -k bash", ['git status']],
+    // xargs runs its command with the piped text as arguments.
+    [
+      "echo 'git commit -q -m x --no-verify' | xargs -I{} bash -c '{}'",
+      ["bash -c 'git commit -q -m x --no-verify'"],
+    ],
+    ["echo 'commit --no-verify' | xargs git", ['git commit --no-verify']],
+    ["echo 'git push' | xargs -n1 -I {} sh -c '{}'", ["sh -c 'git push'"]],
   ])('reads %s', (input, scripts) => {
     expect(findFedScripts(input)).toEqual(scripts)
   })
