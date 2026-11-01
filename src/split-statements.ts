@@ -5,7 +5,7 @@ import type { ParseToken } from './parse-token.js'
  * operators (`>`, `<`, `>>`, …) are deliberately absent: they do not start a
  * new command, so their operands stay with the statement being scanned.
  */
-const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&', '(', ')'])
+const CONTROL_OPERATORS = new Set([';', '&&', '||', '|', '|&', '&'])
 
 /**
  * Splits a parsed token stream into statements at control operators. The

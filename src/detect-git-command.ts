@@ -2,25 +2,9 @@ import type { GitCommand } from './git-command.js'
 import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
 import { findSubCommand } from './find-git-subcommand.js'
 import { findUnquotedGitCommand } from './find-unquoted-git-command.js'
+import { isInComment } from './is-in-comment.js'
 
 const VALID_BEFORE_GIT = ' \t\n\r;&|$`(<{!"\']/.~\\'
-
-/**
- * Returns true when the character at `idx` in `input` is inside a shell comment.
- * @param input - The full command string.
- * @param idx - Index of the character to test.
- * @returns True when the position is inside a `#` comment.
- */
-function isInComment(input: string, idx: number): boolean {
-  const lineStart = input.lastIndexOf('\n', idx - 1) + 1
-  const before = input.slice(lineStart, idx)
-  for (let i = 0; i < before.length; i++) {
-    if (before.charAt(i) !== '#') continue
-    const prev = i > 0 ? before.charAt(i - 1) : ''
-    if (prev !== '$' && prev !== '\\') return true
-  }
-  return false
-}
 
 /**
  * Finds the next `git` (or `git.exe`) token in `input` starting at `start`.

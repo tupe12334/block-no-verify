@@ -1,28 +1,10 @@
 import { parse } from 'shell-quote'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 import type { GitCommand } from './git-command.js'
+import { isInComment } from './is-in-comment.js'
 
 /** Statement-separator characters that end the current shell command. */
 const STATEMENT_SEPARATORS = ['\n', ';', '&', '|']
-
-/**
- * Returns true when the character at `idx` in `input` is inside a shell
- * comment. Duplicated (in miniature) from `detect-git-command.ts` because a
- * comment can only start a new statement boundary, never a sub-command match.
- * @param input - The full command string.
- * @param idx - Index of the character to test.
- * @returns True when the position is inside a `#` comment.
- */
-function isInComment(input: string, idx: number): boolean {
-  const lineStart = input.lastIndexOf('\n', idx - 1) + 1
-  const before = input.slice(lineStart, idx)
-  for (let i = 0; i < before.length; i++) {
-    if (before.charAt(i) !== '#') continue
-    const prev = i > 0 ? before.charAt(i - 1) : ''
-    if (prev !== '$' && prev !== '\\') return true
-  }
-  return false
-}
 
 /**
  * Finds the git sub-command by scanning raw text for a literal, whole-word

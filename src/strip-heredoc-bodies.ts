@@ -1,3 +1,5 @@
+import { commandWords } from './command-words.js'
+
 /**
  * Matches a heredoc operator and its delimiter: `<<EOF`, `<<-EOF`, `<<'EOF'`,
  * `<<"EOF"`, `<<\EOF`. A here-string `<<<` is not a heredoc, so the operator
@@ -22,7 +24,7 @@ const ASSIGNMENT = /^[A-Za-z_]\w*=/
  * @returns True when the heredoc body is shell code.
  */
 function runsHeredocAsShell(segment: string): boolean {
-  const words = segment.trim().split(/\s+/)
+  const words = commandWords(segment)
   const program = words.find(word => !ASSIGNMENT.test(word))
   if (program === undefined) return false
   const base = program.slice(program.lastIndexOf('/') + 1)
@@ -94,18 +96,16 @@ const PLAIN_CAT_HEREDOC = /^\s*cat\s+<<-?\s*\\?['"]?\w+['"]?\s*$/
  * body is kept, because its consumer may execute it (`cat <<\EOF | bash`,
  * `tee s.sh <<\EOF`). An unquoted body keeps only its substitution lines.
  * @param line - The line that opens the heredoc.
- * @param index - The offset of the heredoc operator in the line.
  * @param quoted - True when the delimiter is quoted or escaped.
  * @param standalone - True when the input has no substitution, pipe or redirect.
  * @returns What to keep of the body.
  */
 function keepMode(
   line: string,
-  index: number | undefined,
   quoted: boolean,
   standalone: boolean
 ): PendingBody['keep'] {
-  if (feedsShell(line.slice(0, index))) return 'all'
+  if (feedsShell(line)) return 'all'
   if (!quoted) return 'expansions'
   return standalone && PLAIN_CAT_HEREDOC.test(line) ? 'none' : 'all'
 }
@@ -159,7 +159,7 @@ export function stripHeredocBodies(input: string): string {
       queue.push({
         delimiter: word.replace(/\\(.)|['"]/g, '$1'),
         stripTabs: match[1] === '-',
-        keep: keepMode(line, match.index, quoted, standalone),
+        keep: keepMode(line, quoted, standalone),
       })
     }
   }

@@ -12,6 +12,9 @@ const SHELLS = new Set(
 /** `eval` joins its arguments and runs them as a command line. */
 const EVAL = new Set(['eval'])
 
+/** `trap` runs its first operand as a command when a signal arrives. */
+const TRAP = new Set(['trap'])
+
 /** `env` runs the value of its split-string option as a command line. */
 const ENV = new Set(['env'])
 
@@ -92,6 +95,8 @@ export function findShellScripts(input: string): string[] {
       after = null
     } else if (EVAL.has(token)) {
       evalWords = []
+    } else if (TRAP.has(baseName(token))) {
+      next = 'shell'
     } else if (SHELLS.has(baseName(token))) {
       after = 'shell'
     } else if (ENV.has(baseName(token))) {
