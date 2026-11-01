@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.1
+
+### Patch Changes
+
+- 3d3a5ed: Harden `core.hooksPath` override detection. Every override that the previous release blocks is still blocked. The check now also blocks an override that reaches a git command the textual check missed: a function or alias that runs git, `xargs git`, a persistent setting (`export`, `set -o` options, `eval`) with a hook run possible, and an unexported `NAME=value` with a hook run possible. No override that the previous release blocks is allowed.
+- c169eb7: Keep checking text that a shell can run. A heredoc body fed to a shell (`bash <<EOF`, `sh -s <<EOF`) is checked, and so is a quoted-delimiter body whose line is not a plain `cat` (`cat <<\EOF | bash`, `tee s.sh <<\EOF`, `source /dev/stdin <<\EOF`). A quoted `cat` body is dropped as data only when the whole input is that plain read, with no substitution, pipe, list operator, grouping or other redirect. Unquoted bodies keep their `$(` and backtick lines. Single-quoted or escaped `$(` and backticks are neutralized only in a line that is one `echo`, `printf` or `cat` statement, so text that reaches `bash -c`, `eval`, `source` or a pipe is still checked. Several heredoc bodies opened on one line are read in order, and `<<<` is not a heredoc.
+- 0c3cd26: Keep checking `$(…)` and backtick substitutions in an `echo`/`printf`/`cat` statement that also uses ANSI-C quoting (`$'…'`). The quoting rewrite does not expand ANSI-C escapes, so `$'\''` (one literal quote character) looked like a quote mark, and a live substitution between two of them was treated as text. bash runs that substitution, so `echo $'\'' $(git commit … --no-verify) $'\''` committed past the hooks. Literal-substitution neutralization is now skipped whenever ANSI-C or locale quoting is present.
+- 0f9e95a: Require `shell-quote` 1.12.0 or later. Earlier versions split the `&>` and `&>>` redirects into a background `&` and a `>`, so a skip flag written after the redirect file (`git commit -m x &> out -n`) was read as part of a new statement without git and the command was allowed. bash passes those words to git, so the commit skipped its hooks. Installs that resolved `shell-quote` 1.9 to 1.11 were affected.
+
 ## 1.4.0
 
 ### Minor Changes
