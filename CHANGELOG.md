@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.0
+
+### Minor Changes
+
+- 8afafd7: Add a CommonJS entry point so `require('block-no-verify')` works on Node 18 and later, and fix the CLI crash on Node 18. The package now ships `dist/cjs` (built by a second `tsc` pass) and maps the `require` condition to it, while `import` and the `bin` stay ESM. The CLI loads `@polyhook/sdk` through `createRequire`, because the SDK's ESM entry cannot be parsed on Node 18. `engines.node` lowers to `>=18`, and CI now tests Node 18. This is a minor release because it adds a new consumer-facing entry point.
+
+### Patch Changes
+
+- 086a415: Fix false positives on `git commit` short-option bundles. A bundled token such as `-tn`, `-uno` or `-S` followed by a key id no longer reads its trailing `n` as the `-n` (`--no-verify`) flag, because `-t` (template), `-u` (untracked-files) and `-S` (gpg-sign) take their value from the rest of the token. `-t` and `--template` also skip their separate value token. Real bypasses such as `-n`, `-qn`, `-nq`, `-an` and `-n -m x` stay blocked.
+- 102805e: Detect a git name that shell quoting or escaping splits, such as `g''it commit --no-verify`, `g\it commit --no-verify`, and a `g\` line continuation before `it`. The raw-text scan could not see these, so `--no-verify` ran past a failing pre-commit hook. Detection now also compares the shell-unquoted words, reusing the existing `tokenizeCommand` helper, when the raw scan finds nothing.
+- 7946e0e: Strip heredoc bodies from the input before scanning for `--no-verify`, so a `-n`/`--no-verify`-looking flag written inside a heredoc's free-form text (e.g. an example `grep -n` in a doc block) is no longer mistaken for a real flag on a statement it has nothing to do with (#89).
+- 223e318: Fix a bypass where text piped into `xargs` ran a hook-skipping command undetected, so the commit went through a failing pre-commit hook (`echo 'git commit -q -m x --no-verify' | xargs -I{} bash -c '{}'`). xargs runs its command with the piped lines as arguments, but the scan only checked the shell's own operand, which was the replace string `{}`. The piped text is now combined with xargs' command the way xargs does it (in place of `-I{}`/`-i`/`--replace`, or appended), and that command is checked like a typed one. Options such as `-n`, `-0` and `-r` are read, and `echo a | xargs grep -n foo` stays allowed.
+
 ## 1.3.18
 
 ### Patch Changes
