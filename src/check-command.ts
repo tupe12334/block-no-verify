@@ -2,7 +2,7 @@ import type { CheckCommandOptions } from './check-command-options.js'
 import type { CheckResult } from './check-result.js'
 import { detectGitCommand } from './detect-git-command.js'
 import { detectBlockedGithubMcpTool } from './detect-github-mcp-tool.js'
-import { hasNoVerifyFlag } from './has-no-verify-flag.js'
+import { findExecutedNoVerifyCommand } from './find-executed-no-verify.js'
 import { hasHooksPathOverride } from './has-hooks-path-override.js'
 import { detectManagerBypass } from './managers/index.js'
 import { maskMessageValues } from './mask-message-values.js'
@@ -99,7 +99,7 @@ export function checkCommand(
     return { blocked: false }
   }
 
-  if (hasNoVerifyFlag(input, gitCommand)) {
+  if (findExecutedNoVerifyCommand(input, gitCommand) !== null) {
     return {
       blocked: true,
       reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,

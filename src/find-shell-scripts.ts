@@ -1,4 +1,5 @@
 import { readSplitStringOption } from './read-split-string-option.js'
+import { isDataProgram } from './is-data-program.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Shells whose `-c` operand is a command string they run (#101). */
@@ -68,6 +69,10 @@ export function findShellScripts(input: string): string[] {
   let after: 'shell' | 'env' | null = null
   let next: 'shell' | 'env' | null = null
   let evalWords: string[] | null = null
+  // The statement's program is the first word that is not an assignment.
+  // A data program (`printf '%s' eval …`) runs none of its words.
+  let headSeen = false
+  let dataStatement = false
   const endStatement = (): void => {
     if (evalWords !== null && evalWords.length > 0) {
       scripts.push(evalWords.join(' '))
@@ -75,12 +80,19 @@ export function findShellScripts(input: string): string[] {
     evalWords = null
     after = null
     next = null
+    headSeen = false
+    dataStatement = false
   }
   for (const token of tokenizeCommand(input)) {
     if (typeof token !== 'string') {
       if ('op' in token && CONTROL_OPERATORS.has(token.op)) endStatement()
       continue
     }
+    if (!headSeen && !/^[A-Za-z_]\w*=/.test(token)) {
+      headSeen = true
+      dataStatement = isDataProgram(baseName(token))
+    }
+    if (dataStatement) continue
     const splitString = after === 'env' ? readSplitStringOption(token) : null
     if (evalWords !== null) {
       evalWords.push(token)
