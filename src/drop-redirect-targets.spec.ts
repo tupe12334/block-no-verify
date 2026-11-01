@@ -32,4 +32,12 @@ describe('dropRedirectTargets', () => {
       dropRedirectTargets(tokenizeCommand('git status | grep --no-verify'))
     ).toEqual(['git', 'status', { op: '|' }, 'grep', '--no-verify'])
   })
+
+  it('keeps the word of a <<< here-string, which is stdin text', () => {
+    expect(dropRedirectTargets(tokenizeCommand('cat <<< -n'))).toEqual([
+      'cat',
+      { op: '<<<' },
+      '-n',
+    ])
+  })
 })
