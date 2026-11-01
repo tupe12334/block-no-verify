@@ -412,3 +412,41 @@ describe('detectGitCommand', () => {
     })
   })
 })
+
+describe('git name split by shell quoting (bypass)', () => {
+  it("should detect g''it split by empty quotes", () => {
+    expect(detectGitCommand("g''it commit -q -m x --no-verify")).toBe('commit')
+  })
+
+  it('should detect g\\it with a backslash escape inside the name', () => {
+    expect(detectGitCommand('g\\it commit -q -m x --no-verify')).toBe('commit')
+  })
+
+  it('should detect g\\<newline>it with a line continuation inside the name', () => {
+    expect(detectGitCommand('g\\\nit commit -q -m x --no-verify')).toBe(
+      'commit'
+    )
+  })
+
+  it("should detect g''it.exe split by empty quotes", () => {
+    expect(detectGitCommand("g''it.exe push origin main")).toBe('push')
+  })
+
+  it('should detect the split git name after a chain operator', () => {
+    expect(detectGitCommand("echo ok && g''it commit --no-verify")).toBe(
+      'commit'
+    )
+  })
+
+  it("should return null for quoted text that unquotes to git with no sub-command: echo 'g''it'", () => {
+    expect(detectGitCommand("echo 'g''it'")).toBeNull()
+  })
+
+  it('should return null for a word that only contains git: digit commit', () => {
+    expect(detectGitCommand('digit commit')).toBeNull()
+  })
+
+  it('should return null for a word that only ends in git: legit commit', () => {
+    expect(detectGitCommand('legit commit')).toBeNull()
+  })
+})
