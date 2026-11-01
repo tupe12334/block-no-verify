@@ -7,7 +7,6 @@ describe('checkCommand literal shell text', () => {
       "printf '%s' '$(git push --no-verify)'",
       'echo "\\$(git push --no-verify)"',
       'echo "\\`git push --no-verify\\`"',
-      "echo $'$(git push --no-verify)'",
       'cat <<\\EOF\ngit push --no-verify\nEOF',
       'cat <<EOF\ngit commit --no-verify\nEOF',
       "bash -c 'cat' <<EOF\ngit commit -q -m x\nEOF",
@@ -15,6 +14,13 @@ describe('checkCommand literal shell text', () => {
     ])('allows %j', command => {
       expect(checkCommand(command).blocked).toBe(false)
     })
+  })
+
+  // ANSI-C quoting is not expanded, so its quote pairs may differ from bash.
+  // Text that mixes it with a substitution is checked anyway (fail closed),
+  // even where bash would print the substitution as text.
+  it('blocks a substitution inside ANSI-C quoting (fail closed)', () => {
+    expect(checkCommand("echo $'$(git push --no-verify)'").blocked).toBe(true)
   })
 
   describe('still blocks a shell that runs the text', () => {
