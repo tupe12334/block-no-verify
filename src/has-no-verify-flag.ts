@@ -71,7 +71,6 @@ function statementHasNoVerifyFlag(
   command: GitCommand
 ): boolean {
   let skipNext = false
-  const subcommandIndex = statement.indexOf(command)
 
   for (const [index, token] of statement.entries()) {
     if (skipNext) {
@@ -82,13 +81,6 @@ function statementHasNoVerifyFlag(
     if (VALUE_OPTIONS.has(token)) {
       skipNext = true
       continue
-    }
-
-    // `--` after the git sub-command ends its option parsing: every later
-    // word is a path or a ref, never a flag. A `--` before it belongs to
-    // another program (`command -- git ...`).
-    if (token === '--' && index > subcommandIndex) {
-      return false
     }
 
     // --no-verify is a bypass for every git sub-command we guard.
@@ -127,19 +119,6 @@ function statementCommand(statement: string[]): GitCommand | null {
     if (statement.includes(cmd)) return cmd
   }
   return null
-}
-
-/**
- * Returns true when a statement's program word keeps a literal backslash after
- * shell quote removal (`"git""\.exe"` is `git\.exe`). Bash runs a program
- * by that exact name, and no program is called `git\.exe`, so the statement
- * does not run git. Used to stop the unresolved-git fallback from matching it.
- * @param statement - The statement's string argv tokens.
- * @returns True when the first word contains a backslash.
- */
-function namesLiteralBackslashProgram(statement: string[]): boolean {
-  const [program = ''] = statement
-  return program.includes('\\')
 }
 
 /**
@@ -191,9 +170,7 @@ export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
     if (statementHasNoVerifyFlag(statement, cmd)) return true
   }
   if (anyGitStatement) return false
-  return statements.some(
-    statement =>
-      !namesLiteralBackslashProgram(statement) &&
-      statementHasNoVerifyFlag(statement, command)
+  return statements.some(statement =>
+    statementHasNoVerifyFlag(statement, command)
   )
 }

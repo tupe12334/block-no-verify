@@ -436,9 +436,33 @@ describe('hasNoVerifyFlag', () => {
       )
     })
 
-    it('does not read words after -- as flags', () => {
-      expect(hasNoVerifyFlag('git commit -- --no-verify', 'commit')).toBe(false)
-      expect(hasNoVerifyFlag('git commit -- -n', 'commit')).toBe(false)
+    it('keeps scanning a flag-shaped word after -- (fail closed)', () => {
+      expect(hasNoVerifyFlag('git commit -- --no-verify', 'commit')).toBe(true)
+      expect(hasNoVerifyFlag('git commit -- -n', 'commit')).toBe(true)
+    })
+
+    it('blocks a flag after an option that may take -- as its value', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git push -o -- --no-verify origin HEAD:refs/heads/new',
+          'push'
+        )
+      ).toBe(true)
+      expect(
+        hasNoVerifyFlag(
+          'git commit --trailer -- -n -m x --allow-empty',
+          'commit'
+        )
+      ).toBe(true)
+    })
+
+    it('blocks a flag in a second command on a later line', () => {
+      expect(
+        hasNoVerifyFlag(
+          'git commit -m x --allow-empty -- f\ngit commit -m x --allow-empty -n',
+          'commit'
+        )
+      ).toBe(true)
     })
 
     it('still reads a flag before -- as a flag', () => {
@@ -469,9 +493,9 @@ describe('hasNoVerifyFlag', () => {
       expect(hasNoVerifyFlag('git commit 2>/dev/null -n', 'commit')).toBe(true)
     })
 
-    it('does not run git when its program word keeps a backslash', () => {
+    it('keeps blocking a bare -n after a backslash program word (fail closed)', () => {
       expect(hasNoVerifyFlag('"git""\\.exe" commit -n -m x', 'commit')).toBe(
-        false
+        true
       )
     })
   })
