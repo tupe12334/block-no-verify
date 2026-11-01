@@ -91,6 +91,6 @@
   },
   "dependencies": {
     "@polyhook/sdk": "^0.1.4",
-    "shell-quote": "^1.9.0"
+    "shell-quote": "^1.12.0"
   }
 }
