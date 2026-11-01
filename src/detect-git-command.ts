@@ -1,6 +1,7 @@
 import type { GitCommand } from './git-command.js'
 import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
 import { findSubCommand } from './find-git-subcommand.js'
+import { findUnquotedGitCommand } from './find-unquoted-git-command.js'
 
 const VALID_BEFORE_GIT = ' \t\n\r;&|$`(<{!"\']/.~\\'
 
@@ -57,7 +58,9 @@ function findGit(
  * defeat detection. The sub-command is then located via
  * {@link findSubCommand}, which also tolerates a sub-command split up by
  * shell quoting (e.g. `git pu"sh"`), on top of the plain whole-word/quoted
- * cases the raw-text scan already handles.
+ * cases the raw-text scan already handles. When that scan finds nothing, the
+ * shell-unquoted words are compared too (see {@link findUnquotedGitCommand}),
+ * so a git name split by quoting or escaping (e.g. `g''it`) is detected.
  * @param input - The command string to scan for a git sub-command.
  * @returns The detected git sub-command, or null when none is found.
  */
@@ -66,7 +69,7 @@ export function detectGitCommand(input: string): GitCommand | null {
   let start = 0
   while (start < expanded.length) {
     const git = findGit(expanded, start)
-    if (!git) return null
+    if (!git) break
     if (isInComment(expanded, git.idx)) {
       start = git.idx + git.len
       continue
@@ -76,5 +79,7 @@ export function detectGitCommand(input: string): GitCommand | null {
     if (cmd) return cmd
     start = searchStart
   }
-  return null
+  // The raw scan cannot see a git name that quoting or escaping splits
+  // (e.g. `g''it`), so fall back to the shell-unquoted words.
+  return findUnquotedGitCommand(input)
 }
