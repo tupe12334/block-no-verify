@@ -1,3 +1,5 @@
+import { hasEnvOverrideThatRuns } from './hooks-path-env-scope.js'
+
 /**
  * Checks if the input contains a -c core.hooksPath= override
  * which is used to bypass git hooks by redirecting the hooks directory.
@@ -41,5 +43,6 @@ export function hasHooksPathOverride(input: string): boolean {
     return true
   }
 
-  return false
+  // Hardening only: the scoped check adds blocks and never allows.
+  return hasEnvOverrideThatRuns(input)
 }
