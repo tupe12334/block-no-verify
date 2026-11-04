@@ -136,6 +136,18 @@ describe('hasHooksPathOverride', () => {
     it('should not detect a bare lowercase read', () => {
       expect(hasHooksPathOverride('git config core.hookspath')).toBe(false)
     })
+
+    // The key and the word `config` used to be matched independently, so prose
+    // mentioning both was blocked even though it set nothing (#130).
+    describe('prose mentioning the key and the word config (#130)', () => {
+      it.each([
+        "echo 'core.hooksPath via -c and git config'",
+        'echo "see docs about core.hooksPath and git config"',
+        'git config --list; echo core.hooksPath notes',
+      ])('%s', command => {
+        expect(hasHooksPathOverride(command)).toBe(false)
+      })
+    })
   })
 
   // Git config keys are case-insensitive (#91).
