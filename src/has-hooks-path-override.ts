@@ -41,7 +41,9 @@ export function hasHooksPathOverride(input: string): boolean {
   // value is set with a space instead of `=`. A bare read (no value, e.g.
   // `git config core.hooksPath` or `--get`/`--unset`) is intentionally not
   // matched since it does not redirect hooks.
-  if (/\bconfig\b/.test(input) && /core\.hookspath\s*[= ]\s*\S/i.test(input)) {
+  // `config` must come before the key and in the same statement: matching the
+  // two independently blocked prose that merely mentions both (#130).
+  if (/\bconfig\b[^;&|()]*?core\.hookspath\s*[= ]\s*\S/i.test(input)) {
     return true
   }
 
