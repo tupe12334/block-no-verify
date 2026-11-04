@@ -10,6 +10,7 @@ import { findAliasCommands } from './find-alias-commands.js'
 import { findDerivedCommands } from './find-derived-commands.js'
 import { findUnknownSubcommandBypass } from './find-unknown-subcommand-bypass.js'
 import { issuesUrl } from './package-info.js'
+import { runsOnlyDataPrograms } from './runs-only-data-programs.js'
 
 /**
  * Note appended to every block reason instructing the agent to report a
@@ -39,7 +40,18 @@ export function checkCommand(
       reason: `BLOCKED: ${blockedMcpTool} bypasses local git hooks by writing through the GitHub API. Use local git commands so hooks can run. ${FALSE_POSITIVE_NOTE}`,
     }
   }
+  return checkText(input, false)
+}
 
+/**
+ * Checks a command text for a hook bypass: the input itself, or a command
+ * found inside it.
+ * @param input - The command text.
+ * @param inner - True for a command found inside the checked input (an alias
+ *   value, a `sh -c` script), whose output the input may run.
+ * @returns CheckResult indicating whether the command should be blocked.
+ */
+function checkText(input: string, inner: boolean): CheckResult {
   const detectedGitCommand = detectGitCommand(input)
   const gitCommand =
     detectedGitCommand === null ? undefined : detectedGitCommand
@@ -63,7 +75,7 @@ export function checkCommand(
   // A git alias runs its value when invoked, so check what each alias
   // defined here would run (#91).
   for (const aliasCommand of findAliasCommands(input)) {
-    const aliasResult = checkCommand(aliasCommand, options)
+    const aliasResult = checkText(aliasCommand, true)
     if (aliasResult.blocked) {
       return {
         blocked: true,
@@ -75,7 +87,7 @@ export function checkCommand(
 
   // `sh -c "…"` runs its operand as a command, so check it as one (#101).
   for (const script of findDerivedCommands(input)) {
-    const scriptResult = checkCommand(script, options)
+    const scriptResult = checkText(script, true)
     if (scriptResult.blocked) {
       return {
         blocked: true,
@@ -99,7 +111,14 @@ export function checkCommand(
     return { blocked: false }
   }
 
-  if (hasNoVerifyFlag(input, gitCommand)) {
+  // When every program on the line only prints or searches text (`echo "git
+  // commit -m x" | grep -n x`), no git runs, so a flag there is theirs. A
+  // command found inside the input is checked in full: the input may run what
+  // it prints.
+  if (
+    hasNoVerifyFlag(input, gitCommand) &&
+    (inner || !runsOnlyDataPrograms(input))
+  ) {
     return {
       blocked: true,
       reason: `BLOCKED: --no-verify flag is not allowed with git ${gitCommand}. Git hooks must not be bypassed. ${FALSE_POSITIVE_NOTE}`,
