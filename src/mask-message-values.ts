@@ -112,5 +112,14 @@ export function maskMessageValues(input: string): string {
       program = undefined
     }
   }
-  return words.join(' ')
+  const masked = words.join(' ')
+  try {
+    tokenizeCommand(masked)
+    return masked
+  } catch {
+    // The words lost their quotes, so single-quoted text such as `'${f(x)}'`
+    // became a substitution the tokenizer rejects. Escape `$` and `\` so the
+    // copy parses and keeps the quote-free form the override checks read.
+    return words.map(word => word.replace(/[\\$]/g, '\\$&')).join(' ')
+  }
 }

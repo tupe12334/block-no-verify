@@ -61,4 +61,18 @@ describe('maskMessageValues', () => {
       'git commit -m "a b" $(echo ${)'
     )
   })
+
+  // The rebuilt words lose their quotes, so single-quoted `${…}` text would
+  // become an unterminated substitution that the tokenizer rejects.
+  it('escapes $ and \\ when the rebuilt text does not parse', () => {
+    expect(maskMessageValues("echo '${a b}'")).toBe('echo \\${a b}')
+    expect(maskMessageValues('git commit -m "a b" && echo \'${f(x)}\'')).toBe(
+      'git commit -m _ && echo \\${f(x)}'
+    )
+    expect(
+      maskMessageValues("git -c core.hooks'Path'=/x commit '${a b}'")
+    ).toBe('git -c core.hooksPath=/x commit \\${a b}')
+    expect(maskMessageValues("echo '\\${a b}'")).toBe('echo \\${a b}')
+    expect(maskMessageValues("echo '\\\\${a b}'")).toBe('echo \\\\\\\\\\${a b}')
+  })
 })
