@@ -1,5 +1,4 @@
-/** Stands in for the `$` or backtick of a literal (non-running) opener. */
-const NEUTRAL = '\u0001'
+import { NEUTRAL } from './neutral-marker.js'
 
 /** An open quote or substitution. `depth` counts parentheses in a `subst`. */
 interface Frame {
