@@ -67,4 +67,26 @@ describe('stripHeredocBodies', () => {
     const input = 'cat <<\\EOF | bash\ngit push --no-verify\nEOF'
     expect(stripHeredocBodies(input)).toBe(input)
   })
+
+  it('escapes the expansions of a kept quoted body the shell never expands', () => {
+    const result = stripHeredocBodies(
+      "cat > run.mjs <<'EOF'\nconsole.log(`${r.stdout.trim()}`)\nEOF"
+    )
+    expect(result).toBe(
+      "cat > run.mjs <<'EOF'\nconsole.log(\\`\\${r.stdout.trim()}\\`)\nEOF"
+    )
+  })
+
+  it('keeps the bypass text of a kept quoted body readable after escaping', () => {
+    const result = stripHeredocBodies(
+      "tee s.sh <<'EOF'\ngit -c core.hooksPath=$HOME/x push --no-verify\nEOF"
+    )
+    expect(result).toContain('--no-verify')
+    expect(result).toContain('core.hooksPath=')
+  })
+
+  it('does not escape a quoted body that a shell on the line runs', () => {
+    const input = 'bash <<\'EOF\'\ngit push --no-verify "${FLAG}"\nEOF'
+    expect(stripHeredocBodies(input)).toBe(input)
+  })
 })
