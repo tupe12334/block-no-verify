@@ -53,6 +53,12 @@ interface PendingBody {
    * quoted body, which is plain data.
    */
   keep: 'all' | 'expansions' | 'none'
+  /**
+   * True when the kept body is literal text that the shell reading this command
+   * never expands: a quoted delimiter, with no shell on the line to run the
+   * body. Its `$` and backticks are escaped so the parser reads them as text.
+   */
+  neutralize: boolean
 }
 
 /**
@@ -64,6 +70,20 @@ interface PendingBody {
 function keepsBodyLine(keep: PendingBody['keep'], line: string): boolean {
   if (keep === 'all') return true
   return keep === 'expansions' && hasLiveExpansion(line)
+}
+
+/**
+ * Escapes the characters that make `shell-quote` read text as an expansion, so
+ * a quoted heredoc body parses as the literal text bash passes through (#154).
+ * A quoted delimiter stops every expansion, so `${x.y()}` in such a body is
+ * text, not a substitution the parser must reject as malformed. The flag and
+ * config names the scans look for hold none of these characters, so escaping
+ * them cannot hide a bypass.
+ * @param line - A body line of a quoted heredoc.
+ * @returns The line with its backslashes, `$` and backticks escaped.
+ */
+function neutralizeExpansions(line: string): string {
+  return line.replace(/[\\$`]/g, '\\$&')
 }
 
 /**
@@ -147,7 +167,10 @@ export function stripHeredocBodies(input: string): string {
       const head = queue[0]
       const candidate = head.stripTabs ? line.replace(/^\t+/, '') : line
       const isTerminator = candidate === head.delimiter
-      if (isTerminator || keepsBodyLine(head.keep, line)) result.push(line)
+      if (isTerminator) result.push(line)
+      else if (keepsBodyLine(head.keep, line)) {
+        result.push(head.neutralize ? neutralizeExpansions(line) : line)
+      }
       if (isTerminator) queue.shift()
       continue
     }
@@ -160,6 +183,7 @@ export function stripHeredocBodies(input: string): string {
         delimiter: word.replace(/\\(.)|['"]/g, '$1'),
         stripTabs: match[1] === '-',
         keep: keepMode(line, quoted, standalone),
+        neutralize: quoted && !feedsShell(line),
       })
     }
   }
