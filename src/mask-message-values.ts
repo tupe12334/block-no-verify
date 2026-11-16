@@ -70,17 +70,26 @@ function isMessageProgram(token: string): boolean {
 /** Matches a leading `NAME=value` env assignment before a statement's program. */
 const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
 
+/** Text that reads the same bare: no quote, escape, space or operator. */
+const PLAIN_PREFIX = /^[\w.,:=@%+/-]*$/
+
 /**
  * Single-quotes a word that holds a `$`. The tokenizer already read that `$`
  * as text (single-quoted or escaped text, or a `$(…)` in double quotes).
  * Joined bare, the next parse of the rebuilt string would read it again as an
  * expansion, and `${x:-$(…)}` would throw "Bad substitution" on text the shell
- * never expands. The regex checks still see the quoted text.
+ * never expands. Only the part from the first `$` is quoted when the part
+ * before it is plain (`SKIP=lint'$x'`), so the regex checks that start at a
+ * `NAME=` or `core.hooksPath=` word still match it.
  * @param word - A token string, or its masked form.
- * @returns The word, single-quoted when it holds a `$`.
+ * @returns The word, with the text from its first `$` single-quoted.
  */
 function keepLiteral(word: string): string {
-  return word.includes('$') ? `'${word.split("'").join("'\\''")}'` : word
+  const dollar = word.indexOf('$')
+  if (dollar === -1) return word
+  const plain = PLAIN_PREFIX.test(word.slice(0, dollar))
+  const start = plain ? dollar : 0
+  return `${word.slice(0, start)}'${word.slice(start).split("'").join("'\\''")}'`
 }
 
 /**

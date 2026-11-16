@@ -41,6 +41,35 @@ describe('runHook: ${…:-$(…)} text the shell never expands', () => {
     })
   })
 
+  // Overrides whose value holds a `$`: the rebuilt text must still match the
+  // regex checks that start at `NAME=` or `core.hooksPath=`.
+  describe('still blocks an override with $ in its value', () => {
+    it.each([
+      'HUSKY=0$Z git commit -m x',
+      'git -c core.hooksPath=$HOME/x commit -m x',
+      'git -c "core.hooksPath=$D" commit -m x',
+      'git -c core.hooksPath=/dev/null$X commit -m x',
+      'GIT_CONFIG_PARAMETERS=$P git commit -m x',
+      'git commit -m "$(date)" --no-verify',
+      `git -c 'core.hooksPath=/x$y' commit -m x`,
+      `git -c core.hooksPath='$HOME/x' commit -m x`,
+      `git '-c' 'core.hooksPath=$x' commit -m x`,
+      `git config core.hooksPath '/x$y'`,
+      `git config 'core.hooksPath' '$y'`,
+      `git --config-env='core.hooksPath=$V' commit -m x`,
+      `GIT_CONFIG_PARAMETERS="'core.hooksPath'='$x'" git commit -m x`,
+      `GIT_CONFIG_PARAMETERS='$P' git commit -m x`,
+      `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0='$x' git commit -m x`,
+      `LEFTHOOK_EXCLUDE='lint$x' git commit -m x`,
+      `LEFTHOOK_EXCLUDE='$x' git commit -m x`,
+      `SKIP='lint$x' git commit -m x`,
+      `SKIP='$x' git commit -m x`,
+    ])('%s', async command => {
+      const result = await runHook(bashEvent(command), makeSdk())
+      expect(result.blocked).toBe(true)
+    })
+  })
+
   // A `-c` payload runs, and outside quotes `${x:-$(…)}` cannot be read:
   // `${x:-$(echo git commit -n)}` alone runs `git commit -n`. Still fail closed.
   describe('still fails closed on a payload the shell expands', () => {

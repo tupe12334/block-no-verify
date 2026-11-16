@@ -39,6 +39,12 @@ describe('maskMessageValues', () => {
     )
   })
 
+  it('keeps a plain NAME= prefix before a literal $ bare', () => {
+    expect(maskMessageValues(`SKIP='lint$x' git commit -m y`)).toBe(
+      `SKIP=lint'$x' git commit -m _`
+    )
+  })
+
   it('resolves quotes around single words', () => {
     expect(maskMessageValues(`git -c 'core.hooksPath=/x' commit`)).toBe(
       'git -c core.hooksPath=/x commit'
