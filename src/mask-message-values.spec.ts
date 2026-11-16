@@ -26,7 +26,16 @@ describe('maskMessageValues', () => {
 
   it('keeps a message that contains a command substitution', () => {
     expect(maskMessageValues('git commit -m "$(echo hi)"')).toBe(
-      'git commit -m $(echo hi)'
+      "git commit -m '$(echo hi)'"
+    )
+  })
+
+  it('keeps a word with a literal $ single-quoted', () => {
+    expect(maskMessageValues(`ssh host '\${x:-$(( 1 ))}'`)).toBe(
+      `ssh host '\${x:-$(( 1 ))}'`
+    )
+    expect(maskMessageValues(`ssh host "it's \\$HOME"`)).toBe(
+      `ssh host 'it'\\''s $HOME'`
     )
   })
 
