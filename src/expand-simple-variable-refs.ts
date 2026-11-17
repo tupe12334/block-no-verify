@@ -69,8 +69,8 @@ function replaceVariableRefs(
  */
 const PARAMETER_WORD = /\$\{[A-Za-z_][A-Za-z0-9_]*:?[-=+]([^{}]*)\}/g
 
-/** A word of plain text only: no space, quote, `$`, backtick or operator. */
-const PLAIN_WORD = /^[\w./:@%+,=-]*$/
+/** Non-empty plain text: no space, quote, `$`, backtick or operator. */
+const PLAIN_WORD = /^[\w./:@%+,=-]+$/
 
 /**
  * Marks each index of `text` that bash reads as literal text: a character in

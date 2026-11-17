@@ -49,6 +49,11 @@ const blocked = [
   `bash -c '${param(':-', 'git')} commit -n -m x'`,
   `echo $(${param(':-', 'git')} commit -n -m x)`,
   `eval '${param(':-', 'git')} commit -n -m x'`,
+  // An empty word stays as written, so it fails closed as before.
+  ...[':-', '-', ':=', '=', ':+', '+'].map(
+    op => `git ${param(op, '')} ${NV} -m x`
+  ),
+  `git "${param(':-', '')}" ${NV} -m x`,
 ]
 
 const allowed = [
