@@ -26,7 +26,31 @@ describe('maskMessageValues', () => {
 
   it('keeps a message that contains a command substitution', () => {
     expect(maskMessageValues('git commit -m "$(echo hi)"')).toBe(
-      'git commit -m $(echo hi)'
+      'git commit -m \\$(echo hi)'
+    )
+  })
+
+  it('escapes \\, $ and backtick in a word with a literal $', () => {
+    expect(maskMessageValues(`ssh host '\${x:-$(( 1 ))}'`)).toBe(
+      'ssh host \\${x:-\\$(( 1 ))}'
+    )
+    expect(maskMessageValues(`ssh host "it's \\$HOME"`)).toBe(
+      `ssh host it's \\$HOME`
+    )
+    expect(maskMessageValues("ssh host 'a\\`b`$c'")).toBe(
+      'ssh host a\\\\\\`b\\`\\$c'
+    )
+  })
+
+  it('keeps a NAME= prefix at the word start before a literal $', () => {
+    expect(maskMessageValues(`SKIP='lint$x' git commit -m y`)).toBe(
+      'SKIP=lint\\$x git commit -m _'
+    )
+    expect(maskMessageValues(`SKIP='0'\\''$x' git commit -m y`)).toBe(
+      `SKIP=0'\\$x git commit -m _`
+    )
+    expect(maskMessageValues(`SKIP='"$y"' git commit -m y`)).toBe(
+      'SKIP="\\$y" git commit -m _'
     )
   })
 

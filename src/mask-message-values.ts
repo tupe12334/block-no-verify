@@ -71,6 +71,21 @@ function isMessageProgram(token: string): boolean {
 const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
 
 /**
+ * Escapes each `\`, `$` and backtick in a word that holds a `$`, and leaves
+ * the rest of the word as it is. The tokenizer already read that `$` as text
+ * (single-quoted or escaped text, or a `$(…)` in double quotes). Joined bare,
+ * the next parse of the rebuilt string would read it again as an expansion,
+ * and `${x:-$(…)}` would throw "Bad substitution" on text the shell never
+ * expands. No quote is added, so a `NAME=` or `core.hooksPath=` prefix stays
+ * at the start of the word, where the regex checks look for it.
+ * @param word - A token string, or its masked form.
+ * @returns The word, with `\`, `$` and backtick escaped when it holds a `$`.
+ */
+function keepLiteral(word: string): string {
+  return word.includes('$') ? word.replace(/[\\$`]/g, '\\$&') : word
+}
+
+/**
  * Rebuilds the input from its `shell-quote` tokens with message values
  * masked, so the regex-based hooks-path and manager env checks no longer
  * match override-looking text inside a commit message or PR body (#93).
@@ -79,9 +94,10 @@ const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
  * whose program is `git` or `gh`. Every other quoted string, such as a
  * `bash -c "…"` payload or text piped into `sh`, stays visible, because the
  * shell may run it. A message that contains a command substitution is not
- * masked either. A masked value keeps its position. When the tokenizer's
- * statements might not match the shell's (see `canMaskMessageValues`), the
- * input is returned unchanged.
+ * masked either. A masked value keeps its position. A word with a literal `$`
+ * is escaped (see `keepLiteral`). When the tokenizer's statements
+ * might not match the shell's (see `canMaskMessageValues`), the input is
+ * returned unchanged.
  * @param input - The raw command string.
  * @returns The input with message values masked.
  */
@@ -104,7 +120,7 @@ export function maskMessageValues(input: string): string {
       if (isProgramWord) program = token
       const masks =
         !isProgramWord && program !== undefined && isMessageProgram(program)
-      words.push(masks ? maskToken(token, previous) : token)
+      words.push(keepLiteral(masks ? maskToken(token, previous) : token))
       previous = token
     } else if ('op' in token) {
       words.push(token.op === 'glob' ? token.pattern : token.op)
