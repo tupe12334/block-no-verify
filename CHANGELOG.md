@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.3
+
+### Patch Changes
+
+- 7f0ff79: Stop blocking `git commit` when a short bundle ends in a value option (`-am "--no-verify"`), and when a redirect target looks like a flag (`> --no-verify`).
+- b7729db: Also check a command with each `${x:-word}`, `${x-word}`, `${x:=word}`, `${x=word}`, `${x:+word}` and `${x+word}` expansion replaced by its word, so a git program name, sub-command or flag given as a parameter-expansion word is detected. The command as written is still checked first.
+- 79ab120: Stop false "could not parse" blocks when single-quoted or escaped text holds `${…:-$(…)}`, as in `printf '%s' '${x:-$(( 1 ))}'`. The message-masking rebuild joined words without their quotes, so a later parse read the literal text as an expansion and threw `Bad substitution`. In a rebuilt word that holds a `$`, each `\`, `$` and backtick is now backslash-escaped (for example `SKIP=lint\$x`). No quote is added, so the regex checks for `NAME=` and `core.hooksPath=` still match at the start of the word. An unquoted `${…:-$(…)}`, including one in a `bash -c` payload, still fails closed.
+
 ## 1.4.2
 
 ### Patch Changes
