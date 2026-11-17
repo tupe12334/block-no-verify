@@ -2,6 +2,7 @@ import type { CheckCommandOptions } from './check-command-options.js'
 import type { CheckResult } from './check-result.js'
 import { checkCommandText } from './check-command-text.js'
 import { expandParameterWords } from './expand-parameter-words.js'
+import { checkMaskedMessageValues } from './check-masked-message-values.js'
 import { InputTooLongError } from './input-too-long-error.js'
 import { MAX_INPUT_LENGTH } from './max-input-length.js'
 import { resolveAssignmentEscapes } from './resolve-assignment-escapes.js'
@@ -86,7 +87,9 @@ let budget = MAX_SCAN_WORK
  * @param depth - The text's substitution depth.
  * @param options - Optional context such as the invoked tool name.
  * @returns CheckResult, or a block when the budget runs out or the text
- *   grows too long to check.
+ *   grows too long to check. A text too long to check gets one more try with
+ *   its commit messages and PR bodies masked (see
+ *   {@link checkMaskedMessageValues}).
  */
 function scan(
   text: string,
@@ -98,10 +101,16 @@ function scan(
   try {
     return checkCommandText(text, options, checkCommand)
   } catch (error) {
-    if (error instanceof InputTooLongError) return CANNOT_CHECK
-    // eslint-disable-next-line error/no-throw-literal -- rethrows the caught error unchanged, so run-hook still reports it
-    throw error
+    if (!(error instanceof InputTooLongError)) {
+      // eslint-disable-next-line error/no-throw-literal -- rethrows the caught error unchanged, so run-hook still reports it
+      throw error
+    }
   }
+  // Too large: check again with message values masked, or block.
+  const masked = checkMaskedMessageValues(text, maskedText =>
+    checkVariants(maskedText, depth, options)
+  )
+  return masked === null ? CANNOT_CHECK : masked
 }
 
 /**

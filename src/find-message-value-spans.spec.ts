@@ -39,6 +39,8 @@ describe('findMessageValueSpans', () => {
   it('skips a value that can run code', () => {
     expect(values('git commit -m "$(git log)"')).toEqual([])
     expect(values('git commit -m "`git log`"')).toEqual([])
+    expect(values('git commit -m "a $x"')).toEqual([])
+    expect(values("git commit -m 'a $x'")).toEqual(['a $x'])
   })
 
   it('skips a value that is not one quoted part', () => {

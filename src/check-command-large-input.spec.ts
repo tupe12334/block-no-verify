@@ -176,6 +176,30 @@ describe('checkCommand: large flat input', () => {
       expect(checkCommand(command).blocked).toBe(true)
     })
   })
+  describe('a hook skip next to a long message value', () => {
+    const body = 'ran git here '.repeat(5042).slice(0, 65_536)
+    const gh = `gh x --body "${body}" --message 'git "commit"'`
+    const commands: [string, string][] = [
+      ['quote-split flag', `${gh} --no''-veri`],
+      ['quote-split full flag', `${gh} --no''${NO_VERIFY.slice(4)}`],
+      ['quote-split prefix', `${gh} --no-ve''ri`],
+      ['prefix', `${gh} --no-veri`],
+      ['quote-split -n cluster', `${gh} -a''n`],
+      ['quote-split -n', `${gh} -''n`],
+      [
+        'git tag with a quote-split flag',
+        `git tag -a v1 -m "${body}" --no''-veri`,
+      ],
+      ['hooksPath', `${gh} -c core.hooksPath=/dev/null`],
+      ['quote-split hooksPath', `${gh} -c core.hoo''ksPath=/dev/null`],
+      ['hook-manager env var', `HUSKY=0 ${gh}`],
+      ['skip env var', `SKIP=lint ${gh}`],
+      ['variable flag', `f=--no''-veri; ${gh} $f`],
+    ]
+    it.each(commands)('blocks a %s', (_name, command) => {
+      expect(checkCommand(command).blocked).toBe(true)
+    })
+  })
 })
 
 describe('exported checks on input too large to check', () => {

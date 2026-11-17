@@ -14,7 +14,8 @@ interface MessageValueSpan {
  * Returns the span inside the quotes of a word that is a whole message
  * value, or null. The value is the whole word after a message option
  * (`--body "…"`), or the part after `=` in `--body="…"`. Either way it must
- * be one quoted part, and it must hold no command substitution.
+ * be one quoted part, and it must hold no command substitution, nor any
+ * other expansion in double quotes.
  * @param input - The command text.
  * @param start - Index of the word's first character.
  * @param word - The word.
@@ -42,6 +43,8 @@ function valueSpan(
   // A command substitution runs even inside a double-quoted message.
   const text = input.slice(span.start, span.end)
   if (text.includes('$(') || text.includes('`')) return null
+  // Any other expansion in double quotes is live too.
+  if (input.charAt(word.quoteStart) === '"' && text.includes('$')) return null
   return span
 }
 

@@ -156,16 +156,14 @@ function findSubCommandTokenized(
  * @param searchStart - Offset (just past the `git` token) to search from.
  * @param chargeParse - Called with the length of the text the tokenizer is
  *   about to parse. It can throw to stop a search that would cost too much.
- * @param scanOnly - When true, only the raw-text scan runs.
  * @returns The detected git sub-command, or null when none is found.
  */
 export function findSubCommand(
   input: string,
   searchStart: number,
-  chargeParse?: (length: number) => void,
-  scanOnly?: boolean
+  chargeParse?: (length: number) => void
 ): GitCommand | null {
   const scanned = findSubCommandByScan(input, searchStart)
-  if (scanned !== null || scanOnly === true) return scanned
+  if (scanned !== null) return scanned
   return findSubCommandTokenized(input, searchStart, chargeParse)
 }

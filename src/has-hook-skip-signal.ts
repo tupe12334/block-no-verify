@@ -24,9 +24,9 @@ const HIDDEN_NAME =
 
 /**
  * Returns true when the text holds anything that may skip git hooks. It is
- * a broad text match, not a parse: it errs toward true. A large command is
- * only exempt from the parse limit when this returns false (see
- * `detectGitCommand`).
+ * a broad text match, not a parse: it errs toward true. It is an extra
+ * guard: a large command with a signal is not masked (see
+ * `checkMaskedMessageValues`).
  * @param text - The command text.
  * @returns True when a hook-skip signal is found.
  */
