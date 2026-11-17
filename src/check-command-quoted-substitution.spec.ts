@@ -64,7 +64,66 @@ describe('runHook: ${…:-$(…)} text the shell never expands', () => {
       `LEFTHOOK_EXCLUDE='$x' git commit -m x`,
       `SKIP='lint$x' git commit -m x`,
       `SKIP='$x' git commit -m x`,
+      `SKIP='0'\\''$x' git commit -m y`,
+      `LEFTHOOK_EXCLUDE='0'\\''$x' git commit -m x`,
+      `SKIP='"$y"' git commit -m y`,
+      `LEFTHOOK_EXCLUDE='"$y"' git commit -m x`,
+      `SKIP='a"b$y' git commit -m y`,
+      `SKIP='a b$y' git commit -m y`,
+      `LEFTHOOK_EXCLUDE='a b$y' git commit -m y`,
+      "SKIP='`x`$y' git commit -m y",
+      `SKIP='a\\$y' git commit -m y`,
     ])('%s', async command => {
+      const result = await runHook(bashEvent(command), makeSdk())
+      expect(result.blocked).toBe(true)
+    })
+  })
+
+  // Every env-skip and hooksPath check, with a `$`-bearing value in each
+  // quoting style. Each command blocks on main, so each must block here.
+  describe('still blocks any quoting of a $-bearing override value', () => {
+    const sq = (v: string): string => `'${v.split("'").join("'\\''")}'`
+    const dq = (v: string): string => `"${v.replace(/["\\$`]/g, '\\$&')}"`
+    const esc = (v: string): string => v.replace(/\W/g, '\\$&')
+    const quoteStyles = [
+      sq,
+      dq,
+      esc,
+      (v: string) => sq(`"${v}"`),
+      (v: string) => sq(`0'${v}`),
+    ]
+    const values = [
+      '$x',
+      'a$x',
+      '0$x',
+      'a b$x',
+      '${x:-$(( 1 ))}',
+      '`x`$y',
+      'a\\$y',
+      'a"b$y',
+    ]
+    const templates = [
+      (v: string) => `SKIP=${v} git commit -m y`,
+      (v: string) => `LEFTHOOK_EXCLUDE=${v} git commit -m y`,
+      (v: string) => `git -c core.hooksPath=${v} commit -m y`,
+      (v: string) => `git config core.hooksPath ${v}`,
+      (v: string) => `git --config-env=core.hooksPath=${v} commit -m y`,
+      (v: string) =>
+        `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=${v} git commit -m y`,
+      (v: string) =>
+        `GIT_CONFIG_PARAMETERS=${sq(`'core.hooksPath'='${v}'`)} git commit -m y`,
+    ]
+    // Main allows this one value (its quote marks do not pair up), so it is
+    // left out: the branch must match main, not be held to more.
+    const allowedOnMain = `LEFTHOOK_EXCLUDE='"a"b$y"' git commit -m y`
+    const commands = templates
+      .flatMap(template =>
+        quoteStyles.flatMap(style =>
+          values.map(value => template(style(value)))
+        )
+      )
+      .filter(command => command !== allowedOnMain)
+    it.each(commands)('%s', async command => {
       const result = await runHook(bashEvent(command), makeSdk())
       expect(result.blocked).toBe(true)
     })

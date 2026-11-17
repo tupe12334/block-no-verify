@@ -70,26 +70,19 @@ function isMessageProgram(token: string): boolean {
 /** Matches a leading `NAME=value` env assignment before a statement's program. */
 const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
 
-/** Text that reads the same bare: no quote, escape, space or operator. */
-const PLAIN_PREFIX = /^[\w.,:=@%+/-]*$/
-
 /**
- * Single-quotes a word that holds a `$`. The tokenizer already read that `$`
- * as text (single-quoted or escaped text, or a `$(…)` in double quotes).
- * Joined bare, the next parse of the rebuilt string would read it again as an
- * expansion, and `${x:-$(…)}` would throw "Bad substitution" on text the shell
- * never expands. Only the part from the first `$` is quoted when the part
- * before it is plain (`SKIP=lint'$x'`), so the regex checks that start at a
- * `NAME=` or `core.hooksPath=` word still match it.
+ * Escapes each `\`, `$` and backtick in a word that holds a `$`, and leaves
+ * the rest of the word as it is. The tokenizer already read that `$` as text
+ * (single-quoted or escaped text, or a `$(…)` in double quotes). Joined bare,
+ * the next parse of the rebuilt string would read it again as an expansion,
+ * and `${x:-$(…)}` would throw "Bad substitution" on text the shell never
+ * expands. No quote is added, so a `NAME=` or `core.hooksPath=` prefix stays
+ * at the start of the word, where the regex checks look for it.
  * @param word - A token string, or its masked form.
- * @returns The word, with the text from its first `$` single-quoted.
+ * @returns The word, with `\`, `$` and backtick escaped when it holds a `$`.
  */
 function keepLiteral(word: string): string {
-  const dollar = word.indexOf('$')
-  if (dollar === -1) return word
-  const plain = PLAIN_PREFIX.test(word.slice(0, dollar))
-  const start = plain ? dollar : 0
-  return `${word.slice(0, start)}'${word.slice(start).split("'").join("'\\''")}'`
+  return word.includes('$') ? word.replace(/[\\$`]/g, '\\$&') : word
 }
 
 /**
@@ -102,7 +95,7 @@ function keepLiteral(word: string): string {
  * `bash -c "…"` payload or text piped into `sh`, stays visible, because the
  * shell may run it. A message that contains a command substitution is not
  * masked either. A masked value keeps its position. A word with a literal `$`
- * stays single-quoted (see `keepLiteral`). When the tokenizer's statements
+ * is escaped (see `keepLiteral`). When the tokenizer's statements
  * might not match the shell's (see `canMaskMessageValues`), the input is
  * returned unchanged.
  * @param input - The raw command string.
