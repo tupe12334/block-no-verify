@@ -136,7 +136,6 @@ describe('checkCommand: large flat input', () => {
     const forms: [string, string][] = [
       ['gh --body "…"', `gh pr create --title t --body "${body}"`],
       ["gh --body '…'", `gh pr create --title t --body '${body}'`],
-      ['gh --body="…"', `gh pr create --title t --body="${body}"`],
       ['git commit -m "…"', `git commit -m "${body}"`],
       ['git tag -m "…"', `git tag -a v1 -m "${body}"`],
     ]
@@ -198,6 +197,37 @@ describe('checkCommand: large flat input', () => {
     ]
     it.each(commands)('blocks a %s', (_name, command) => {
       expect(checkCommand(command).blocked).toBe(true)
+    })
+  })
+  describe('a long value with more text in its shell word', () => {
+    const body = 'ran git here '.repeat(5042).slice(0, 65_536)
+    const skip = `--message 'git "commit"' --no''-veri`
+    const commands: [string, string][] = [
+      [
+        'single quote then substitution',
+        `gh pr create --body '${body}'"$(git commit ${NO_VERIFY})"`,
+      ],
+      ['single quote then variable', `x=${NO_VERIFY}; gh x --body '${body}'$x`],
+      [
+        'single quote then escaped space',
+        `gh x --body '${body}'\\ ${NO_VERIFY}`,
+      ],
+      ['two single-quoted parts', `gh x --message '${body}'' ${NO_VERIFY}'`],
+      ['single quote then bare text', `gh x --body '${body}'ab ${skip}`],
+      ['double quote then single quote', `gh x --body "${body}"'a' ${skip}`],
+      ['double quote then escaped quote', `gh x --body "${body}"\\" ${skip}`],
+      ['escaped space then single quote', `gh x --body a\\ '${body}' ${skip}`],
+      ['single-quoted value with a $', `gh x --body '${body} $x' ${skip}`],
+      ['--body= form', `gh x --body='${body}' ${skip}`],
+    ]
+    it.each(commands)('blocks %s', (_name, command) => {
+      const result = checkCommand(command)
+      expect(result.blocked).toBe(true)
+    })
+
+    it('blocks the --body= form of a plain body by the cap', () => {
+      const result = checkCommand(`gh pr create --title t --body="${body}"`)
+      expect(result.reason).toContain('could not check this command')
     })
   })
 })

@@ -7,6 +7,7 @@ describe('readShellWord', () => {
       end: 9,
       value: 'ab cd',
       quoteStart: 6,
+      quoteEnd: 8,
       quotes: 2,
       operator: false,
     })

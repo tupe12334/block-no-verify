@@ -12,6 +12,8 @@ interface ShellWord {
   value: string
   /** Index of the opening quote of the word's last quoted part, or -1. */
   quoteStart: number
+  /** Index of the closing quote of the word's last quoted part, or -1. */
+  quoteEnd: number
   /** Number of quoted parts in the word. */
   quotes: number
   /**
@@ -34,12 +36,14 @@ export function readShellWord(input: string, start: number): ShellWord | null {
       end: start + 1,
       value: '',
       quoteStart: -1,
+      quoteEnd: -1,
       quotes: 0,
       operator: true,
     }
   }
   let value = ''
   let quoteStart = -1
+  let quoteEnd = -1
   let quotes = 0
   let glob = false
   let i = start
@@ -56,6 +60,7 @@ export function readShellWord(input: string, start: number): ShellWord | null {
         i++
       }
       if (i >= input.length) return null
+      quoteEnd = i
       i++
       continue
     }
@@ -64,5 +69,5 @@ export function readShellWord(input: string, start: number): ShellWord | null {
     value += input.charAt(i)
     i++
   }
-  return { end: i, value, quoteStart, quotes, operator: glob }
+  return { end: i, value, quoteStart, quoteEnd, quotes, operator: glob }
 }

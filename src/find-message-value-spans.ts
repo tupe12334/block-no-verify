@@ -12,10 +12,11 @@ interface MessageValueSpan {
 
 /**
  * Returns the span inside the quotes of a word that is a whole message
- * value, or null. The value is the whole word after a message option
- * (`--body "…"`), or the part after `=` in `--body="…"`. Either way it must
- * be one quoted part, and it must hold no command substitution, nor any
- * other expansion in double quotes.
+ * value, or null. The value is the word after a message option
+ * (`--body "…"`, `-m '…'`). The whole word must be exactly one quoted part,
+ * with nothing attached before or after it, and with no `$` or backtick
+ * inside. Anything else (`--body="…"`, `'…'"…"`, `'…'$x`, `'…'\ x`) is not
+ * a value here, so it stays command text.
  * @param input - The command text.
  * @param start - Index of the word's first character.
  * @param word - The word.
@@ -28,23 +29,16 @@ function valueSpan(
   word: NonNullable<ReturnType<typeof readShellWord>>,
   previous: string | undefined
 ): MessageValueSpan | null {
-  if (word.quotes !== 1 || !/["']/.test(input.charAt(word.end - 1))) {
-    return null
-  }
-  const prefix = input.slice(start, word.quoteStart)
-  const isValueWord =
-    prefix === '' && previous !== undefined && MESSAGE_OPTIONS.has(previous)
-  const isEqualsForm =
-    prefix.startsWith('--') &&
-    prefix.endsWith('=') &&
-    MESSAGE_OPTIONS.has(prefix.slice(0, -1))
-  if (!isValueWord && !isEqualsForm) return null
-  const span = { start: word.quoteStart + 1, end: word.end - 1 }
-  // A command substitution runs even inside a double-quoted message.
+  const isOneQuotedPart =
+    word.quotes === 1 &&
+    word.quoteStart === start &&
+    word.quoteEnd === word.end - 1
+  if (!isOneQuotedPart) return null
+  if (previous === undefined || !MESSAGE_OPTIONS.has(previous)) return null
+  const span = { start: start + 1, end: word.end - 1 }
+  // A `$` or backtick may expand, so such a value is not masked.
   const text = input.slice(span.start, span.end)
-  if (text.includes('$(') || text.includes('`')) return null
-  // Any other expansion in double quotes is live too.
-  if (input.charAt(word.quoteStart) === '"' && text.includes('$')) return null
+  if (text.includes('$') || text.includes('`')) return null
   return span
 }
 
@@ -54,8 +48,8 @@ function valueSpan(
  * statement whose program is `git` or `gh`. The shell never runs that text,
  * so a `git` word in it is prose, not a command.
  *
- * Only a value that is one quoted part is found (`--body "…"`, `-m '…'`,
- * `--body="…"`). No value is found when masking is not safe (see
+ * Only a value whose whole word is one quoted part is found (`--body "…"`,
+ * `-m '…'`). No value is found when masking is not safe (see
  * `canMaskMessageValues`). A value that is not found is checked as command
  * text, as before.
  * @param input - The command text.

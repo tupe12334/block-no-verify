@@ -19,7 +19,6 @@ describe('findMessageValueSpans', () => {
       'a',
       'b c',
     ])
-    expect(values('gh pr create --body="git x" -B main')).toEqual(['git x'])
     expect(values('A=1 git tag -a v1 -m "x"')).toEqual(['x'])
   })
 
@@ -40,13 +39,19 @@ describe('findMessageValueSpans', () => {
     expect(values('git commit -m "$(git log)"')).toEqual([])
     expect(values('git commit -m "`git log`"')).toEqual([])
     expect(values('git commit -m "a $x"')).toEqual([])
-    expect(values("git commit -m 'a $x'")).toEqual(['a $x'])
+    expect(values("git commit -m 'a $x'")).toEqual([])
   })
 
   it('skips a value that is not one quoted part', () => {
     expect(values('git commit -m fix')).toEqual([])
     expect(values('git commit -m "a"\'b\'')).toEqual([])
     expect(values('git commit -m x"git y"')).toEqual([])
+    expect(values("git commit -m 'a'b")).toEqual([])
+    expect(values("git commit -m 'a'$x")).toEqual([])
+    expect(values("git commit -m 'a'\\ b")).toEqual([])
+    expect(values("git commit -m 'a'' b'")).toEqual([])
+    expect(values('git commit -m "a"\\"')).toEqual([])
+    expect(values('gh pr create --body="git x" -B main')).toEqual([])
   })
 
   it('finds nothing when masking is not safe', () => {
