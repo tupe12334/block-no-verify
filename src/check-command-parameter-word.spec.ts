@@ -54,6 +54,13 @@ const blocked = [
     op => `git ${param(op, '')} ${NV} -m x`
   ),
   `git "${param(':-', '')}" ${NV} -m x`,
+  // A variable set earlier holds the value, so the text as written is checked
+  // too, not only the word.
+  `x=-q; git commit ${param(':-', '-m')} -n x`,
+  `x=-q; git commit ${param(':-', '-m')} ${NV} x`,
+  `x=-q; git ${param(':-', 'commit')} -n x`,
+  `export x=-q; git commit ${param(':-', '-m')} -n x`,
+  `x=-q\ngit commit ${param(':-', '-m')} -n x`,
 ]
 
 const allowed = [
