@@ -230,6 +230,29 @@ describe('checkCommand: large flat input', () => {
       expect(result.reason).toContain('could not check this command')
     })
   })
+  describe('a long value under another program', () => {
+    const pad = 'git '.repeat(15_000)
+    const value = `': ${pad}; git "commit" "-n"'`
+    const commands: [string, string][] = [
+      ['backtick substitution', `git status \`parallel -m ${value} ::: x\``],
+      ['$( ) substitution', `git status $(parallel -m ${value} ::: x)`],
+      ['<( ) substitution', `git status <(parallel -m ${value} ::: x)`],
+      ['>( ) substitution', `git status >(parallel -m ${value} ::: x)`],
+      ['xargs after a pipe', `git status | xargs -m ${value}`],
+      ['xargs after &&', `git status && xargs -m ${value}`],
+      [
+        'sh -c payload',
+        `git status; sh -c 'parallel -m "${pad}; git commit -n" ::: x'`,
+      ],
+      ['eval', `git status; eval parallel -m ${value} ::: x`],
+      ['brace group', `git status; { parallel -m ${value} ::: x; }`],
+      ['glob before git', `echo *.ts git status -m ${value}`],
+      ['redirect before git', `echo > git -m ${value}`],
+    ]
+    it.each(commands)('blocks a %s', (_name, command) => {
+      expect(checkCommand(command).blocked).toBe(true)
+    })
+  })
 })
 
 describe('exported checks on input too large to check', () => {

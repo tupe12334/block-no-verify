@@ -1,8 +1,10 @@
 import { canMaskMessageValues } from './can-mask-message-values.js'
 import { ENV_ASSIGNMENT } from './env-assignment.js'
-import { isMessageProgram } from './is-message-program.js'
 import { MESSAGE_OPTIONS } from './message-options.js'
 import { readShellWord } from './read-shell-word.js'
+
+/** Text that runs a command inside another: a substitution or `eval`. */
+const NESTED_COMMAND = /`|\$\(|<\(|>\(|\beval\b/
 
 /** The text inside one quoted message value, from `start` to before `end`. */
 interface MessageValueSpan {
@@ -43,20 +45,23 @@ function valueSpan(
 }
 
 /**
- * Finds the quoted message values that `maskMessageValues` treats as data:
- * a commit or tag message, or a PR, issue or release title or body, in a
- * statement whose program is `git` or `gh`. The shell never runs that text,
- * so a `git` word in it is prose, not a command.
+ * Finds the quoted message values that are data: a commit or tag message,
+ * or a PR, issue or release title or body, in a simple command whose program
+ * word is literally `git` or `gh`. The shell never runs that text, so a
+ * `git` word in it is prose, not a command.
  *
- * Only a value whose whole word is one quoted part is found (`--body "…"`,
- * `-m '…'`). No value is found when masking is not safe (see
- * `canMaskMessageValues`). A value that is not found is checked as command
- * text, as before.
+ * The program word is the first word after a `;`, `&`, `|`, `(`, `)` or
+ * `{`, after any `NAME=value` words. A redirect before it hides the
+ * program, so then nothing in that command is found. Only a value whose
+ * whole word is one quoted part is found (`--body "…"`, `-m '…'`). Nothing
+ * is found when the text has a backtick, `$(`, `<(`, `>(` or `eval`, or
+ * when masking is not safe (see `canMaskMessageValues`). A value that is not
+ * found is checked as command text, as before.
  * @param input - The command text.
  * @returns The spans inside the quotes, in text order.
  */
 export function findMessageValueSpans(input: string): MessageValueSpan[] {
-  if (!canMaskMessageValues(input)) return []
+  if (NESTED_COMMAND.test(input) || !canMaskMessageValues(input)) return []
   const spans: MessageValueSpan[] = []
   let program: string | undefined
   let previous: string | undefined
@@ -68,13 +73,18 @@ export function findMessageValueSpans(input: string): MessageValueSpan[] {
     }
     const word = readShellWord(input, i)
     if (word === null) return spans
-    if (word.operator) {
+    const raw = input.slice(i, word.end)
+    if (word.operator && /[<>]/.test(raw)) {
+      // A redirect before the program word hides which program runs.
+      if (program === undefined) program = raw
+      previous = undefined
+    } else if (word.operator || raw === '{') {
       program = undefined
       previous = undefined
     } else {
-      if (program === undefined && !ENV_ASSIGNMENT.test(word.value)) {
-        program = word.value
-      } else if (program !== undefined && isMessageProgram(program)) {
+      if (program === undefined && !ENV_ASSIGNMENT.test(raw)) {
+        program = raw
+      } else if (program === 'git' || program === 'gh') {
         const span = valueSpan(input, i, word, previous)
         if (span !== null) spans.push(span)
       }

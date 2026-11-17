@@ -61,8 +61,26 @@ describe('findMessageValueSpans', () => {
     expect(values('git commit -m "a')).toEqual([])
   })
 
-  it('ends the statement at a glob', () => {
-    expect(values('git add *.ts -m "a"')).toEqual([])
-    expect(values('echo *.ts git commit -m "a"')).toEqual(['a'])
+  it('reads a glob as a word, not a statement end', () => {
+    expect(values('git add *.ts -m "a"')).toEqual(['a'])
+    expect(values('echo *.ts git commit -m "a"')).toEqual([])
+  })
+
+  it('needs the program word to be literally git or gh', () => {
+    expect(values('{ git commit -m "a"; }')).toEqual(['a'])
+    expect(values('(git commit -m "a")')).toEqual(['a'])
+    expect(values('"git" commit -m "a"')).toEqual([])
+    expect(values('/usr/bin/git commit -m "a"')).toEqual([])
+    expect(values('git commit > f -m "a"')).toEqual(['a'])
+    expect(values('echo > git -m "a"')).toEqual([])
+    expect(values('> f git commit -m "a"')).toEqual([])
+  })
+
+  it('finds nothing when a command can run inside another', () => {
+    expect(values("git status `parallel -m 'a' ::: x`")).toEqual([])
+    expect(values("git commit -m 'a' $(true)")).toEqual([])
+    expect(values("git commit -m 'a' <(true)")).toEqual([])
+    expect(values("git commit -m 'a' >(true)")).toEqual([])
+    expect(values("git commit -m 'a'; eval x")).toEqual([])
   })
 })

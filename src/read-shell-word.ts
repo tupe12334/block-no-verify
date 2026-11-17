@@ -1,9 +1,6 @@
 /** Characters the tokenizer reads as operators. Each ends the statement. */
 const OPERATORS = ';&|()<>'
 
-/** Characters that make the tokenizer read an unquoted word as a glob. */
-const GLOB = '*?'
-
 /** One shell word or operator, as {@link readShellWord} reads it. */
 interface ShellWord {
   /** Index just past the word. */
@@ -16,10 +13,7 @@ interface ShellWord {
   quoteEnd: number
   /** Number of quoted parts in the word. */
   quotes: number
-  /**
-   * True for an operator or a glob. The tokenizer reads both as operator
-   * tokens, which end the statement.
-   */
+  /** True for an operator character (`;&|()<>`). */
   operator: boolean
 }
 
@@ -45,7 +39,6 @@ export function readShellWord(input: string, start: number): ShellWord | null {
   let quoteStart = -1
   let quoteEnd = -1
   let quotes = 0
-  let glob = false
   let i = start
   while (i < input.length) {
     const char = input.charAt(i)
@@ -65,9 +58,8 @@ export function readShellWord(input: string, start: number): ShellWord | null {
       continue
     }
     if (char === '\\') i++
-    if (GLOB.includes(input.charAt(i))) glob = true
     value += input.charAt(i)
     i++
   }
-  return { end: i, value, quoteStart, quoteEnd, quotes, operator: glob }
+  return { end: i, value, quoteStart, quoteEnd, quotes, operator: false }
 }

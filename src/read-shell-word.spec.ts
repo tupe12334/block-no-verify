@@ -21,8 +21,8 @@ describe('readShellWord', () => {
     expect(readShellWord('; x', 0)).toMatchObject({ end: 1, operator: true })
   })
 
-  it('reads an unquoted glob as an operator', () => {
-    expect(readShellWord('*.ts x', 0)?.operator).toBe(true)
+  it('reads a glob as a word', () => {
+    expect(readShellWord('*.ts x', 0)?.operator).toBe(false)
     expect(readShellWord('"*.ts" x', 0)?.operator).toBe(false)
   })
 
