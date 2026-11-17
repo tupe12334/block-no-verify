@@ -1,3 +1,6 @@
+import { InputTooLongError } from './input-too-long-error.js'
+import { MAX_INPUT_LENGTH } from './max-input-length.js'
+
 /**
  * Matches a simple `NAME=` assignment prefix anchored at the start of input
  * or right after a shell separator/space/opening-paren. The value itself is
@@ -5,6 +8,19 @@
  * alternation of optional capture groups.
  */
 const ASSIGNMENT_NAME = /(?:^|[\s;&|(])([A-Za-z_][A-Za-z0-9_]*)=/g
+
+/**
+ * Matches the longest name after each `$` or `${`. Every `$name` or
+ * `${name}` reference in a text has its name in these matches.
+ */
+const REFERENCE_NAME = /\$\{?([A-Za-z_][A-Za-z0-9_]*)/g
+
+/**
+ * Most replace work, in characters, one expansion may do. Each replace walks
+ * the whole text, so a text with many referenced assignments costs its length
+ * once per assignment. Past this, the text is not checked.
+ */
+const MAX_REPLACE_WORK = MAX_INPUT_LENGTH * 50
 
 const DOUBLE_QUOTED_VALUE = /^"([^"]*)"/
 const SINGLE_QUOTED_VALUE = /^'([^']*)'/
@@ -30,6 +46,15 @@ function readAssignedValue(rest: string): string {
 }
 
 /**
+ * Returns the names that `text` may reference as `$name` or `${name}`.
+ * @param text - The string to scan.
+ * @returns The set of names found after a `$` or `${`.
+ */
+function referencedNames(text: string): Set<string> {
+  return new Set(Array.from(text.matchAll(REFERENCE_NAME), match => match[1]))
+}
+
+/**
  * Replaces every `$name` or `${name}` reference in `text` with `value`. The
  * bare `$name` form only matches when not immediately followed by another
  * identifier character, so `$cfoo` is never mistaken for a reference to `c`.
@@ -43,21 +68,13 @@ function replaceVariableRefs(
   name: string,
   value: string
 ): string {
-  const braced = text.split(`\${${name}}`).join(value)
   const bare = `$${name}`
-  let result = ''
-  let i = 0
-  while (i < braced.length) {
-    if (
-      braced.startsWith(bare, i) &&
-      !IDENTIFIER_CHAR.test(braced.charAt(i + bare.length))
-    ) {
-      result += value
-      i += bare.length
-      continue
-    }
-    result += braced.charAt(i)
-    i += 1
+  const parts = text.split(`\${${name}}`).join(value).split(bare)
+  const [first, ...rest] = parts
+  let result = first
+  for (const part of rest) {
+    const kept = IDENTIFIER_CHAR.test(part.charAt(0))
+    result += (kept ? bare : value) + part
   }
   return result
 }
@@ -69,19 +86,34 @@ function replaceVariableRefs(
  * `git` executable or its sub-command behind a simple variable indirection
  * (e.g. `c=push; git $c --no-verify`) does not defeat detection. Only plain
  * literal values are substituted; this is not a real shell parser.
+ *
+ * An assignment whose name the text does not reference is skipped without a
+ * replace, so a text with many assignments stays linear.
  * @param input - The raw command string.
  * @returns The command string with simple variable references replaced by
  *   their assigned literal value.
+ * @throws {InputTooLongError} When the expanded text grows longer than
+ *   {@link MAX_INPUT_LENGTH}, or the replaces would do more than
+ *   {@link MAX_REPLACE_WORK} work.
  */
 export function expandSimpleVariableRefs(input: string): string {
   let result = input
+  let names = referencedNames(input)
+  let work = 0
   ASSIGNMENT_NAME.lastIndex = 0
   let match = ASSIGNMENT_NAME.exec(input)
   while (match !== null) {
     const name = match[1]
-    const value = readAssignedValue(input.slice(match.index + match[0].length))
+    const value = names.has(name)
+      ? readAssignedValue(input.slice(match.index + match[0].length))
+      : ''
     if (value.length > 0) {
       result = replaceVariableRefs(result, name, value)
+      work += result.length
+      if (result.length > MAX_INPUT_LENGTH || work > MAX_REPLACE_WORK) {
+        throw new InputTooLongError()
+      }
+      names = referencedNames(result)
     }
     match = ASSIGNMENT_NAME.exec(input)
   }

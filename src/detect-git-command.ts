@@ -2,9 +2,17 @@ import type { GitCommand } from './git-command.js'
 import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
 import { findSubCommand } from './find-git-subcommand.js'
 import { findUnquotedGitCommand } from './find-unquoted-git-command.js'
+import { InputTooLongError } from './input-too-long-error.js'
 import { isInComment } from './is-in-comment.js'
+import { MAX_INPUT_LENGTH } from './max-input-length.js'
 
 const VALID_BEFORE_GIT = ' \t\n\r;&|$`(<{!"\']/.~\\'
+
+/**
+ * Most text, in characters, the sub-command searches of one
+ * {@link detectGitCommand} call may parse.
+ */
+const MAX_PARSE_WORK = MAX_INPUT_LENGTH * 20
 
 /**
  * Finds the next `git` (or `git.exe`) token in `input` starting at `start`.
@@ -45,11 +53,21 @@ function findGit(
  * cases the raw-text scan already handles. When that scan finds nothing, the
  * shell-unquoted words are compared too (see {@link findUnquotedGitCommand}),
  * so a git name split by quoting or escaping (e.g. `g''it`) is detected.
+ *
+ * Each `git` token can parse the rest of its statement, so many `git` words
+ * in one statement parse it many times. Past {@link MAX_PARSE_WORK}
+ * characters parsed, the input is not checked.
  * @param input - The command string to scan for a git sub-command.
  * @returns The detected git sub-command, or null when none is found.
+ * @throws {InputTooLongError} When the searches would parse too much text.
  */
 export function detectGitCommand(input: string): GitCommand | null {
   const expanded = expandSimpleVariableRefs(input)
+  let parsed = 0
+  const chargeParse = (length: number): void => {
+    parsed += length
+    if (parsed > MAX_PARSE_WORK) throw new InputTooLongError()
+  }
   let start = 0
   while (start < expanded.length) {
     const git = findGit(expanded, start)
@@ -59,7 +77,7 @@ export function detectGitCommand(input: string): GitCommand | null {
       continue
     }
     const searchStart = git.idx + git.len
-    const cmd = findSubCommand(expanded, searchStart)
+    const cmd = findSubCommand(expanded, searchStart, chargeParse)
     if (cmd) return cmd
     start = searchStart
   }

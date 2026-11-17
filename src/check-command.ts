@@ -2,6 +2,8 @@ import type { CheckCommandOptions } from './check-command-options.js'
 import type { CheckResult } from './check-result.js'
 import { checkCommandText } from './check-command-text.js'
 import { expandParameterWords } from './expand-parameter-words.js'
+import { InputTooLongError } from './input-too-long-error.js'
+import { MAX_INPUT_LENGTH } from './max-input-length.js'
 
 /**
  * Deepest substitution nesting a command may have. Deeper input is blocked
@@ -18,10 +20,13 @@ const MAX_NESTING = 50
  */
 const MAX_SCAN_WORK = 200_000
 
-/** Block returned past {@link MAX_NESTING} or {@link MAX_SCAN_WORK}. */
-const TOO_DEEP: CheckResult = {
+/**
+ * Block returned past {@link MAX_NESTING}, {@link MAX_SCAN_WORK} or
+ * {@link MAX_INPUT_LENGTH}.
+ */
+const CANNOT_CHECK: CheckResult = {
   blocked: true,
-  reason: `BLOCKED: block-no-verify could not check this command (its command substitutions nest more than ${String(MAX_NESTING)} levels deep or hold too much text), so it cannot confirm that git hooks are not bypassed. Rewrite the command with less nesting.`,
+  reason: `BLOCKED: block-no-verify could not check this command (it is longer than ${String(MAX_INPUT_LENGTH)} characters, or its command substitutions nest more than ${String(MAX_NESTING)} levels deep or hold too much text), so it cannot confirm that git hooks are not bypassed. Rewrite the command shorter or with less nesting.`,
 }
 
 /**
@@ -79,7 +84,8 @@ let budget = MAX_SCAN_WORK
  * @param text - The command text to check.
  * @param depth - The text's substitution depth.
  * @param options - Optional context such as the invoked tool name.
- * @returns CheckResult, or a block when the budget runs out.
+ * @returns CheckResult, or a block when the budget runs out or the text
+ *   grows too long to check.
  */
 function scan(
   text: string,
@@ -87,8 +93,14 @@ function scan(
   options: CheckCommandOptions | undefined
 ): CheckResult {
   budget -= text.length * (depth + 1)
-  if (budget < 0) return TOO_DEEP
-  return checkCommandText(text, options, checkCommand)
+  if (budget < 0) return CANNOT_CHECK
+  try {
+    return checkCommandText(text, options, checkCommand)
+  } catch (error) {
+    if (error instanceof InputTooLongError) return CANNOT_CHECK
+    // eslint-disable-next-line error/no-throw-literal -- rethrows the caught error unchanged, so run-hook still reports it
+    throw error
+  }
 }
 
 /**
@@ -125,8 +137,9 @@ function checkVariants(
  * Nested commands are checked through this function too. Within one
  * top-level call, each command text is checked once, so a substitution
  * nested in many others costs about the same as one. Input that nests
- * deeper than {@link MAX_NESTING}, or whose checks would do more than
- * {@link MAX_SCAN_WORK} scan work, is blocked.
+ * deeper than {@link MAX_NESTING}, whose checks would do more than
+ * {@link MAX_SCAN_WORK} scan work, or that is longer than
+ * {@link MAX_INPUT_LENGTH} characters, is blocked.
  * @param input - The command input to check (typically from stdin in AI agent
  *   hooks). May be an empty string when the invocation is a non-shell tool
  *   call (e.g. an MCP tool).
@@ -141,10 +154,11 @@ export function checkCommand(
     checked = new Map()
     budget = MAX_SCAN_WORK
   }
+  if (input.length > MAX_INPUT_LENGTH) return CANNOT_CHECK
   const known = checked.get(input)
   if (known !== undefined) return known
   const depth = substitutionDepth(input)
-  if (depth > MAX_NESTING) return TOO_DEEP
+  if (depth > MAX_NESTING) return CANNOT_CHECK
   nesting += 1
   let result: CheckResult
   try {
