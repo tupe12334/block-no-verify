@@ -4,6 +4,7 @@ import { checkCommandText } from './check-command-text.js'
 import { expandParameterWords } from './expand-parameter-words.js'
 import { InputTooLongError } from './input-too-long-error.js'
 import { MAX_INPUT_LENGTH } from './max-input-length.js'
+import { resolveAssignmentEscapes } from './resolve-assignment-escapes.js'
 
 /**
  * Deepest substitution nesting a command may have. Deeper input is blocked
@@ -104,9 +105,9 @@ function scan(
 }
 
 /**
- * Checks one command text as written and, when it holds a
- * `${NAME:-word}`-style expansion, with each such expansion replaced by its
- * word.
+ * Checks one command text as written and, when they differ from it, with
+ * each `${NAME:-word}`-style expansion replaced by its word and with
+ * escaped assignment values resolved.
  * @param input - The command text to check.
  * @param depth - The text's substitution depth.
  * @param options - Optional context such as the invoked tool name.
@@ -117,10 +118,15 @@ function checkVariants(
   depth: number,
   options: CheckCommandOptions | undefined
 ): CheckResult {
-  const result = scan(input, depth, options)
-  if (result.blocked) return result
-  const variant = expandParameterWords(input)
-  return variant === input ? result : scan(variant, depth, options)
+  let result = scan(input, depth, options)
+  for (const variant of [
+    expandParameterWords(input),
+    resolveAssignmentEscapes(input),
+  ]) {
+    if (result.blocked) return result
+    if (variant !== input) result = scan(variant, depth, options)
+  }
+  return result
 }
 
 /**
@@ -130,9 +136,11 @@ function checkVariants(
  *
  * The text is checked as written first. When it holds a `${NAME:-word}`-style
  * expansion, the text with each such expansion replaced by its word is
- * checked too (see {@link expandParameterWords}), and either check can block.
- * The variant only adds a check, so a command the text check blocks is
- * always blocked, with that check's reason.
+ * checked too (see {@link expandParameterWords}). When an assignment value
+ * holds backslash escapes, the text with those values resolved is checked
+ * too (see {@link resolveAssignmentEscapes}). Any check can block. The
+ * variants only add checks, so a command the text check blocks is always
+ * blocked, with that check's reason.
  *
  * Nested commands are checked through this function too. Within one
  * top-level call, each command text is checked once, so a substitution
