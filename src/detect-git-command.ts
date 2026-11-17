@@ -1,6 +1,7 @@
 import type { GitCommand } from './git-command.js'
 import { expandSimpleVariableRefs } from './expand-simple-variable-refs.js'
 import { findSubCommand } from './find-git-subcommand.js'
+import { findMessageValueSpans } from './find-message-value-spans.js'
 import { findUnquotedGitCommand } from './find-unquoted-git-command.js'
 import { InputTooLongError } from './input-too-long-error.js'
 import { isInComment } from './is-in-comment.js'
@@ -56,10 +57,15 @@ function findGit(
  *
  * Each `git` token can parse the rest of its statement, so many `git` words
  * in one statement parse it many times. Past {@link MAX_PARSE_WORK}
- * characters parsed, the input is not checked.
+ * characters parsed, the input is not checked. A `git` word inside a quoted
+ * commit message or PR body (see {@link findMessageValueSpans}) is prose:
+ * only the cheap raw-text scan runs for it, so it costs no parse work.
  * @param input - The command string to scan for a git sub-command.
  * @returns The detected git sub-command, or null when none is found.
- * @throws {InputTooLongError} When the searches would parse too much text.
+ * @throws {InputTooLongError} When the input is too large to check in
+ *   bounded time: a variable expansion grows past {@link MAX_INPUT_LENGTH}, or
+ *   the searches would parse more than {@link MAX_PARSE_WORK} characters.
+ *   `checkCommand` blocks such input.
  */
 export function detectGitCommand(input: string): GitCommand | null {
   const expanded = expandSimpleVariableRefs(input)
@@ -68,6 +74,8 @@ export function detectGitCommand(input: string): GitCommand | null {
     parsed += length
     if (parsed > MAX_PARSE_WORK) throw new InputTooLongError()
   }
+  let valueSpans: ReturnType<typeof findMessageValueSpans> | undefined
+  let spanIndex = 0
   let start = 0
   while (start < expanded.length) {
     const git = findGit(expanded, start)
@@ -77,7 +85,14 @@ export function detectGitCommand(input: string): GitCommand | null {
       continue
     }
     const searchStart = git.idx + git.len
-    const cmd = findSubCommand(expanded, searchStart, chargeParse)
+    valueSpans ??= findMessageValueSpans(expanded)
+    let span = valueSpans.at(spanIndex)
+    while (span !== undefined && span.end <= git.idx) {
+      spanIndex++
+      span = valueSpans.at(spanIndex)
+    }
+    const inValue = span !== undefined && span.start <= git.idx
+    const cmd = findSubCommand(expanded, searchStart, chargeParse, inValue)
     if (cmd) return cmd
     start = searchStart
   }

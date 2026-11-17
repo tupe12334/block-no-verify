@@ -150,6 +150,9 @@ function statementCommand(statement: string[]): GitCommand | null {
  * @param input - The command string to scan.
  * @param command - The detected git sub-command.
  * @returns True when the command string contains a flag that bypasses hooks.
+ * @throws {InputTooLongError} When the input is too large to check in
+ *   bounded time: a variable expansion grows past `MAX_INPUT_LENGTH`, or one
+ *   statement has very many `git` words. `checkCommand` blocks such input.
  */
 export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
   const tokens = tokenizeCommand(input)

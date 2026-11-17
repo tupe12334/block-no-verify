@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { checkCommand } from './check-command.js'
+import { detectGitCommand } from './detect-git-command.js'
+import { hasHooksPathOverride } from './has-hooks-path-override.js'
+import { hasNoVerifyFlag } from './has-no-verify-flag.js'
+import { InputTooLongError } from './input-too-long-error.js'
 import { MAX_INPUT_LENGTH } from './max-input-length.js'
 
 const NO_VERIFY = '--no-' + 'verify'
@@ -124,5 +128,61 @@ describe('checkCommand: large flat input', () => {
       expect(result.blocked).toBe(true)
       expect(result.reason).toContain(NO_VERIFY)
     })
+  })
+
+  describe('one-line message values with many git words', () => {
+    // 65,536 characters with 5,042 `git` words, on one line.
+    const body = 'ran git here '.repeat(5042).slice(0, 65_536)
+    const forms: [string, string][] = [
+      ['gh --body "…"', `gh pr create --title t --body "${body}"`],
+      ["gh --body '…'", `gh pr create --title t --body '${body}'`],
+      ['gh --body="…"', `gh pr create --title t --body="${body}"`],
+      ['git commit -m "…"', `git commit -m "${body}"`],
+      ['git tag -m "…"', `git tag -a v1 -m "${body}"`],
+    ]
+    it.each(forms)('allows %s', (_name, command) => {
+      const result = timedCheck(command)
+      expect(result.blocked).toBe(false)
+      // About 300 ms is the goal. The bound is loose for slow CI.
+      expect(result.ms).toBeLessThan(3000)
+    })
+
+    it('still blocks a bypass after the body', () => {
+      const result = checkCommand(
+        `gh pr create --title t --body "${body}"; git push ${NO_VERIFY}`
+      )
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain(NO_VERIFY)
+    })
+
+    it('still counts git words in an unmasked value', () => {
+      const result = checkCommand(`echo -m "${'git '.repeat(3000)}"`)
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain('could not check this command')
+    })
+  })
+})
+
+describe('exported checks on input too large to check', () => {
+  const expansion = `a=${'x'.repeat(5000)}; echo${' $a'.repeat(2000)}`
+
+  it('detectGitCommand throws InputTooLongError', () => {
+    expect(() => detectGitCommand(expansion)).toThrow(InputTooLongError)
+  })
+
+  it('detectGitCommand throws InputTooLongError on many git words', () => {
+    expect(() => detectGitCommand(`echo ${'git '.repeat(3000)}`)).toThrow(
+      InputTooLongError
+    )
+  })
+
+  it('hasNoVerifyFlag throws InputTooLongError', () => {
+    expect(() => hasNoVerifyFlag(expansion, 'commit')).toThrow(
+      InputTooLongError
+    )
+  })
+
+  it('hasHooksPathOverride throws InputTooLongError', () => {
+    expect(() => hasHooksPathOverride(expansion)).toThrow(InputTooLongError)
   })
 })

@@ -7,6 +7,9 @@ import { hasEnvOverrideThatRuns } from './hooks-path-env-scope.js'
  * too: `core.hookspath` and `CORE.HOOKSPATH` redirect hooks the same way (#91).
  * @param input - The command string to scan.
  * @returns True when a core.hooksPath override is detected.
+ * @throws {InputTooLongError} When the input is too large to check in
+ *   bounded time: a variable expansion grows past `MAX_INPUT_LENGTH`, or one
+ *   statement has very many `git` words. `checkCommand` blocks such input.
  */
 export function hasHooksPathOverride(input: string): boolean {
   // Match: -c core.hooksPath=<value> with optional quotes around the value
