@@ -50,4 +50,36 @@ describe('checkCommand: command substitutions inside message values', () => {
       expect(checkCommand(command).blocked).toBe(false)
     })
   })
+
+  describe('nested substitutions', () => {
+    const nest = (depth: number, body: string): string =>
+      `git commit -m "${'$('.repeat(depth)}${body}${')'.repeat(depth)}"`
+
+    it.each([20, 30])('checks depth %i in under 200 ms', depth => {
+      const start = performance.now()
+      const result = checkCommand(nest(depth, 'x'))
+      expect(performance.now() - start).toBeLessThan(200)
+      expect(result.blocked).toBe(false)
+    })
+
+    it('blocks a bypass at depth 30', () => {
+      expect(
+        checkCommand(nest(30, `${ENV_SKIPS[0]} git commit -m x`)).blocked
+      ).toBe(true)
+    })
+
+    it('blocks input nested past the limit', () => {
+      const result = checkCommand(nest(500, 'x'))
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain('could not check this command')
+    })
+
+    it('blocks a long body nested deep instead of checking every level', () => {
+      const start = performance.now()
+      const result = checkCommand(nest(50, `echo ${'word '.repeat(20000)}`))
+      expect(performance.now() - start).toBeLessThan(5000)
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain('could not check this command')
+    })
+  })
 })
