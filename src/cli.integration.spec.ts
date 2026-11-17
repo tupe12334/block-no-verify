@@ -266,4 +266,30 @@ describe('CLI integration (Claude Code wire format)', () => {
       expect(isBlocked(result.stdout)).toBe(false)
     })
   })
+
+  describe('command substitutions inside message values', () => {
+    const B = '`'
+    const ENV = 'HUSKY' + '=0'
+
+    it.each([
+      `git commit -m "msg ${B}${ENV} git commit -m x${B}"`,
+      `git commit --message="msg ${B}${ENV} git commit -m x${B}"`,
+      `git commit -F "${B}${ENV} git commit -m x${B}"`,
+      `bash -c 'git commit -m "msg ${B}${ENV} git commit -m x${B}"'`,
+    ])('blocks %s', async command => {
+      const result = await runCli(claudeCodeEvent('Bash', { command }))
+      expect(result.code).toBe(2)
+      expect(isBlocked(result.stdout)).toBe(true)
+    })
+
+    it.each([
+      `git commit -m 'msg ${B}${ENV} git commit -m x${B}'`,
+      `git commit -m "fix: use \\${B}foo\\${B} helper"`,
+      'git commit -m "release $(date +%F)"',
+    ])('allows %s', async command => {
+      const result = await runCli(claudeCodeEvent('Bash', { command }))
+      expect(result.code).toBe(0)
+      expect(isBlocked(result.stdout)).toBe(false)
+    })
+  })
 })
