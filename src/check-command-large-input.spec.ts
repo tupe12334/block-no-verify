@@ -152,13 +152,28 @@ describe('checkCommand: large flat input', () => {
         `gh pr create --title t --body "${body}"; git push ${NO_VERIFY}`
       )
       expect(result.blocked).toBe(true)
-      expect(result.reason).toContain(NO_VERIFY)
+      // The bypass is a hook-skip signal, so the body is not exempt.
+      expect(result.reason).toContain('could not check this command')
     })
 
     it('still counts git words in an unmasked value', () => {
       const result = checkCommand(`echo -m "${'git '.repeat(3000)}"`)
       expect(result.blocked).toBe(true)
       expect(result.reason).toContain('could not check this command')
+    })
+  })
+
+  describe('a quote-split sub-command in a small message value', () => {
+    const commands: [string, string][] = [
+      ['gh pr create --body', `gh pr create --body "git pu'sh'" ${NO_VERIFY}`],
+      ['gh alias --message', `gh x --message "git pu'sh'" ${NO_VERIFY}`],
+      [
+        'escaped glob first',
+        `./runner \\* gh pr create --body "git pu'sh'" ${NO_VERIFY}`,
+      ],
+    ]
+    it.each(commands)('blocks %s', (_name, command) => {
+      expect(checkCommand(command).blocked).toBe(true)
     })
   })
 })
