@@ -1,20 +1,9 @@
 // cspell:ignore allexport shopt
+import { DATA_PROGRAMS } from './data-programs.js'
 import { detectGitCommand } from './detect-git-command.js'
 import { extractNestedStatements } from './extract-nested-statements.js'
 import { splitStatements } from './split-statements.js'
 import { tokenizeCommand } from './tokenize-command.js'
-
-// cspell:ignore fgrep egrep
-/** Programs that only print or search their arguments and never run them. */
-const DATA_PROGRAMS = new Set([
-  'echo',
-  'printf',
-  'cat',
-  'tee',
-  'grep',
-  'egrep',
-  'fgrep',
-])
 
 /** A leading `NAME=value` or `NAME+=value` word. */
 const ASSIGNMENT = /^[A-Za-z_]\w*\+?=/
