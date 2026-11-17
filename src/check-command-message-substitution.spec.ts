@@ -80,4 +80,63 @@ describe('checkCommand: command substitutions inside message values', () => {
       expect(result.reason).toContain('could not check this command')
     })
   })
+
+  describe('scan work limit', () => {
+    const chain = (depth: number, unit: string): string =>
+      `git commit -m "${`$(${unit} `.repeat(depth)}x${')'.repeat(depth)}"`
+
+    it('blocks a short message whose nested checks would do too much work', () => {
+      const command = chain(49, 'X=1 Y=2 git log')
+      expect(command.length).toBeLessThan(1100)
+      const result = checkCommand(command)
+      expect(result.blocked).toBe(true)
+      expect(result.reason).toContain('could not check this command')
+    })
+
+    it('blocks the same message repeated 80 times', () => {
+      const one = chain(49, 'X=1 Y=2 git log').slice(15, -1)
+      const result = checkCommand(`git commit -m "${`${one} `.repeat(80)}"`)
+      expect(result.blocked).toBe(true)
+    })
+
+    it('still checks a shallower chain of the same shape', () => {
+      expect(checkCommand(chain(10, 'X=1 Y=2 git log')).blocked).toBe(false)
+    })
+
+    it('counts nested backticks toward the depth limit', () => {
+      let command = 'x'
+      for (let level = 0; level < 6; level++) {
+        command = `echo ${command.replace(/[\\`]/g, '\\$&')}`
+        command = `\`${command}\``
+      }
+      const deep = `git commit -m "${'$('.repeat(45)}${command}${')'.repeat(45)}"`
+      expect(checkCommand(deep).blocked).toBe(true)
+    })
+
+    it('finishes or blocks random nested input in bounded time', () => {
+      const units = [
+        'git log -1',
+        'echo git commit',
+        'X=1 Y=2 git log',
+        'git log ${A:-b}',
+        'cat <<EOF',
+        'printf "%s" "git log"',
+        'git log `date`',
+      ]
+      let seed = 7
+      const random = (n: number): number => {
+        seed = (seed * 1103515245 + 12345) % 2147483648
+        return seed % n
+      }
+      for (let run = 0; run < 40; run++) {
+        const parts: string[] = []
+        for (let i = 0; i < 1 + random(4); i++) {
+          parts.push(chain(1 + random(50), units[random(units.length)]))
+        }
+        const start = performance.now()
+        checkCommand(parts.join(' && '))
+        expect(performance.now() - start).toBeLessThan(10000)
+      }
+    }, 120000)
+  })
 })

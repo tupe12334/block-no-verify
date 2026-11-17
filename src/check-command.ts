@@ -11,29 +11,46 @@ import { expandParameterWords } from './expand-parameter-words.js'
 const MAX_NESTING = 50
 
 /**
- * Most text, in characters, that the nested checks of one command may read.
- * Each nesting level checks its body again, so a long body nested many
- * levels deep is blocked instead of checked level by level.
+ * Most scan work one top-level call may do, in characters. Each text check
+ * (the command itself and each nested command) costs its length times one
+ * more than its substitution depth, since the scans of a text re-read each
+ * substitution in it. Past this, the command is blocked instead of checked.
  */
-const MAX_NESTED_TEXT = 100_000
+const MAX_SCAN_WORK = 200_000
 
-/** Block returned past {@link MAX_NESTING} or {@link MAX_NESTED_TEXT}. */
+/** Block returned past {@link MAX_NESTING} or {@link MAX_SCAN_WORK}. */
 const TOO_DEEP: CheckResult = {
   blocked: true,
   reason: `BLOCKED: block-no-verify could not check this command (its command substitutions nest more than ${String(MAX_NESTING)} levels deep or hold too much text), so it cannot confirm that git hooks are not bypassed. Rewrite the command with less nesting.`,
 }
 
 /**
- * Returns how deeply the `$(`, `<(` and `>(` substitutions in the text nest,
- * with each `(` inside one counted as a level too. Quotes are not tracked, so
- * the count can be too high but never too low. It is one linear pass, so a
- * deep input is blocked before the slower scans run on it.
+ * Returns the escape level of the backtick at `index`: 1 for a bare one, 2
+ * for one after one backslash, 3 after three, and so on. Each nesting level
+ * of backtick substitutions doubles the backslashes before its backticks.
+ * @param text - The command text.
+ * @param index - Index of a backtick.
+ * @returns The backtick's nesting level.
+ */
+function backtickLevel(text: string, index: number): number {
+  let slashes = 0
+  while (text.charAt(index - slashes - 1) === '\\') slashes += 1
+  return Math.floor(Math.log2(slashes + 1)) + 1
+}
+
+/**
+ * Returns how deeply the substitutions in the text nest: the deepest
+ * `$(`, `<(` and `>(` nesting, with each `(` inside one counted as a level
+ * too, plus the deepest backtick level. Quotes are not tracked, so the count
+ * can be too high but never too low. It is one linear pass, so a deep input
+ * is blocked before the slower scans run on it.
  * @param text - The command text.
  * @returns The deepest nesting found.
  */
 function substitutionDepth(text: string): number {
   let depth = 0
   let deepest = 0
+  let backticks = 0
   for (let i = 0; i < text.length; i++) {
     const char = text.charAt(i)
     if (char === '(' && (depth > 0 || /[$<>]/.test(text.charAt(i - 1)))) {
@@ -41,9 +58,11 @@ function substitutionDepth(text: string): number {
       deepest = Math.max(deepest, depth)
     } else if (char === ')' && depth > 0) {
       depth -= 1
+    } else if (char === '`') {
+      backticks = Math.max(backticks, backtickLevel(text, i))
     }
   }
-  return deepest
+  return deepest + backticks
 }
 
 /** Nested checks in progress for the current top-level call. */
@@ -52,27 +71,44 @@ let nesting = 0
 /** Results by command text for the current top-level call. */
 let checked = new Map<string, CheckResult>()
 
-/** Text the nested checks of the current top-level call may still read. */
-let budget = MAX_NESTED_TEXT
+/** Scan work the current top-level call may still do. */
+let budget = MAX_SCAN_WORK
+
+/**
+ * Checks one text, charging its scan work to the budget first.
+ * @param text - The command text to check.
+ * @param depth - The text's substitution depth.
+ * @param options - Optional context such as the invoked tool name.
+ * @returns CheckResult, or a block when the budget runs out.
+ */
+function scan(
+  text: string,
+  depth: number,
+  options: CheckCommandOptions | undefined
+): CheckResult {
+  budget -= text.length * (depth + 1)
+  if (budget < 0) return TOO_DEEP
+  return checkCommandText(text, options, checkCommand)
+}
 
 /**
  * Checks one command text as written and, when it holds a
  * `${NAME:-word}`-style expansion, with each such expansion replaced by its
  * word.
  * @param input - The command text to check.
+ * @param depth - The text's substitution depth.
  * @param options - Optional context such as the invoked tool name.
  * @returns CheckResult indicating whether the command should be blocked.
  */
 function checkVariants(
   input: string,
+  depth: number,
   options: CheckCommandOptions | undefined
 ): CheckResult {
-  const result = checkCommandText(input, options, checkCommand)
+  const result = scan(input, depth, options)
   if (result.blocked) return result
   const variant = expandParameterWords(input)
-  return variant === input
-    ? result
-    : checkCommandText(variant, options, checkCommand)
+  return variant === input ? result : scan(variant, depth, options)
 }
 
 /**
@@ -89,8 +125,8 @@ function checkVariants(
  * Nested commands are checked through this function too. Within one
  * top-level call, each command text is checked once, so a substitution
  * nested in many others costs about the same as one. Input that nests
- * deeper than {@link MAX_NESTING}, or whose nested checks would read more
- * than {@link MAX_NESTED_TEXT} characters, is blocked.
+ * deeper than {@link MAX_NESTING}, or whose checks would do more than
+ * {@link MAX_SCAN_WORK} scan work, is blocked.
  * @param input - The command input to check (typically from stdin in AI agent
  *   hooks). May be an empty string when the invocation is a non-shell tool
  *   call (e.g. an MCP tool).
@@ -103,16 +139,16 @@ export function checkCommand(
 ): CheckResult {
   if (nesting === 0) {
     checked = new Map()
-    budget = MAX_NESTED_TEXT
+    budget = MAX_SCAN_WORK
   }
   const known = checked.get(input)
   if (known !== undefined) return known
-  if (nesting > 0) budget -= input.length
-  if (budget < 0 || substitutionDepth(input) > MAX_NESTING) return TOO_DEEP
+  const depth = substitutionDepth(input)
+  if (depth > MAX_NESTING) return TOO_DEEP
   nesting += 1
   let result: CheckResult
   try {
-    result = checkVariants(input, options)
+    result = checkVariants(input, depth, options)
   } finally {
     nesting -= 1
   }
