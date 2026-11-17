@@ -96,16 +96,19 @@ const PLAIN_CAT_HEREDOC = /^\s*cat\s+<<-?\s*\\?['"]?\w+['"]?\s*$/
  * body is kept, because its consumer may execute it (`cat <<\EOF | bash`,
  * `tee s.sh <<\EOF`). An unquoted body keeps only its substitution lines.
  * @param line - The line that opens the heredoc.
+ * @param shell - True when the line feeds its heredocs to a shell (see
+ *   {@link feedsShell}).
  * @param quoted - True when the delimiter is quoted or escaped.
  * @param standalone - True when the input has no substitution, pipe or redirect.
  * @returns What to keep of the body.
  */
 function keepMode(
   line: string,
+  shell: boolean,
   quoted: boolean,
   standalone: boolean
 ): PendingBody['keep'] {
-  if (feedsShell(line)) return 'all'
+  if (shell) return 'all'
   if (!quoted) return 'expansions'
   return standalone && PLAIN_CAT_HEREDOC.test(line) ? 'none' : 'all'
 }
@@ -153,13 +156,17 @@ export function stripHeredocBodies(input: string): string {
     }
 
     result.push(line)
+    // Read once per line, not once per heredoc: the answer is the same for
+    // every heredoc on the line.
+    let shell: boolean | undefined
     for (const match of line.matchAll(HEREDOC_START)) {
       const word = match[2]
       const quoted = /['"\\]/.test(word)
+      shell = shell === undefined ? feedsShell(line) : shell
       queue.push({
         delimiter: word.replace(/\\(.)|['"]/g, '$1'),
         stripTabs: match[1] === '-',
-        keep: keepMode(line, quoted, standalone),
+        keep: keepMode(line, shell, quoted, standalone),
       })
     }
   }
