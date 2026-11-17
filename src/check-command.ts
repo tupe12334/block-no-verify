@@ -15,7 +15,7 @@ const MAX_NESTING = 50
  * Each nesting level checks its body again, so a long body nested many
  * levels deep is blocked instead of checked level by level.
  */
-const MAX_NESTED_TEXT = 250_000
+const MAX_NESTED_TEXT = 100_000
 
 /** Block returned past {@link MAX_NESTING} or {@link MAX_NESTED_TEXT}. */
 const TOO_DEEP: CheckResult = {
