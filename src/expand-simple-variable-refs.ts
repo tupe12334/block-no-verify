@@ -63,6 +63,31 @@ function replaceVariableRefs(
 }
 
 /**
+ * Matches a `${NAME<op>word}` parameter expansion that can expand to its
+ * word: default (`:-`, `-`), assign (`:=`, `=`) and alternate (`:+`, `+`).
+ * The word holds no braces, so nested forms resolve from the inside out.
+ */
+const PARAMETER_WORD = /\$\{[A-Za-z_][A-Za-z0-9_]*:?[-=+]([^{}]*)\}/g
+
+/**
+ * Replaces each `${NAME:-word}`-style expansion with its word. bash uses that
+ * word when the variable is unset (or, for `+`, set), so the word can be the
+ * program name, the sub-command or a flag. Fail-closed: the word is used even
+ * when the variable could hold another value.
+ * @param text - The string to scan and replace within.
+ * @returns `text` with every such expansion replaced by its word.
+ */
+function expandParameterWords(text: string): string {
+  let result = text
+  let previous = ''
+  while (result !== previous) {
+    previous = result
+    result = result.replace(PARAMETER_WORD, (_match, word: string) => word)
+  }
+  return result
+}
+
+/**
  * Performs a best-effort, textual expansion of trivial `NAME=value`
  * assignments referenced later in the same string as `$NAME`/`${NAME}`. This
  * mirrors what the shell already does before `git` ever runs, so hiding the
@@ -85,5 +110,5 @@ export function expandSimpleVariableRefs(input: string): string {
     }
     match = ASSIGNMENT_NAME.exec(input)
   }
-  return result
+  return expandParameterWords(result)
 }
