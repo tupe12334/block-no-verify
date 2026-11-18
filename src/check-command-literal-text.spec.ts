@@ -16,6 +16,29 @@ describe('checkCommand literal shell text', () => {
     })
   })
 
+  describe('allows single-quoted ${…} text that bash never expands', () => {
+    it.each([
+      "echo '${a b}'",
+      "grep -rn '${JSON.stringify(' src",
+      "git commit -m x && echo '${f(x)}'",
+      'git commit -m "fix LEFTHOOK=0 bypass" && echo \'${a b}\'',
+      "echo '\\\\${a b}'",
+    ])('allows %j', command => {
+      expect(checkCommand(command).blocked).toBe(false)
+    })
+  })
+
+  describe('still blocks an override next to single-quoted ${…} text', () => {
+    it.each([
+      "git -c core.hooks'Path'=/dev/null commit -m x; echo '${a b}'",
+      'echo \'${a b}\'; git "-c" "core.hooksPath=/dev/null" commit -m x',
+      "HUSKY=0'' git commit -m x; echo '${a b}'",
+      "git commit --no-verify -m x; echo '${a b}'",
+    ])('blocks %j', command => {
+      expect(checkCommand(command).blocked).toBe(true)
+    })
+  })
+
   // ANSI-C quoting is not expanded, so its quote pairs may differ from bash.
   // Text that mixes it with a substitution is checked anyway (fail closed),
   // even where bash would print the substitution as text.
