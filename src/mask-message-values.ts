@@ -1,23 +1,11 @@
 import { canMaskMessageValues } from './can-mask-message-values.js'
+import { ENV_ASSIGNMENT } from './env-assignment.js'
+import { isMessageProgram } from './is-message-program.js'
+import { MESSAGE_OPTIONS } from './message-options.js'
 import { tokenizeCommand } from './tokenize-command.js'
 
 /** Placeholder that keeps a masked value's position in the rebuilt string. */
 const MASK = '_'
-
-/**
- * Options whose value is prose for a human reader: a commit or tag message,
- * or a PR/issue/release title or body (`gh … --title/--body/--notes`). Their
- * value is never executed, so override-looking text in it is not a bypass.
- * Other short forms (`-b`, `-t`, `-n`) are left out on purpose: other
- * programs (`sudo -n`, `ssh -t`) give them different meanings.
- */
-const MESSAGE_OPTIONS = new Set([
-  '-m',
-  '--message',
-  '--title',
-  '--body',
-  '--notes',
-])
 
 /**
  * Returns true when a value still runs code inside the outer command: a
@@ -50,25 +38,6 @@ function maskToken(token: string, previous: string | undefined): string {
   }
   return token
 }
-
-/**
- * Returns true when the token names a program whose message options take
- * prose: `git` or `gh`, with an optional path prefix or `.exe` suffix. Other
- * programs can give `-m` another meaning, and GNU `parallel -m "…"` even runs
- * the next word through a shell, so their arguments are never masked.
- * @param token - The statement's program word.
- * @returns True when the program is git or gh.
- */
-function isMessageProgram(token: string): boolean {
-  const base = token
-    .slice(Math.max(token.lastIndexOf('/'), token.lastIndexOf('\\')) + 1)
-    .toLowerCase()
-    .replace(/\.exe$/, '')
-  return base === 'git' || base === 'gh'
-}
-
-/** Matches a leading `NAME=value` env assignment before a statement's program. */
-const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/
 
 /**
  * Escapes each `\`, `$` and backtick in a word that holds a `$`, and leaves

@@ -59,7 +59,10 @@ function findGit(
  * characters parsed, the input is not checked.
  * @param input - The command string to scan for a git sub-command.
  * @returns The detected git sub-command, or null when none is found.
- * @throws {InputTooLongError} When the searches would parse too much text.
+ * @throws {InputTooLongError} When the input is too large to check in
+ *   bounded time: a variable expansion grows past {@link MAX_INPUT_LENGTH}, or
+ *   the searches would parse more than {@link MAX_PARSE_WORK} characters.
+ *   `checkCommand` blocks such input.
  */
 export function detectGitCommand(input: string): GitCommand | null {
   const expanded = expandSimpleVariableRefs(input)
