@@ -6,6 +6,8 @@ describe('findUnknownSubcommandBypass', () => {
     ['git ci --no-verify -m x', 'ci'],
     ['sudo git ci --no-verify', 'ci'],
     ['git add . && git p --no-verify', 'p'],
+    // An alias can name a sub-command where -m takes no value.
+    ['git ci -m "--no-verify"', 'ci'],
   ])('flags %s', (input, subcommand) => {
     expect(findUnknownSubcommandBypass(input)).toBe(subcommand)
   })
@@ -19,7 +21,6 @@ describe('findUnknownSubcommandBypass', () => {
     'git log --grep --no-verify',
     // Words after -- are data.
     'git ci -- --no-verify',
-    'git ci -m "--no-verify"',
     'git status',
   ])('allows %s', input => {
     expect(findUnknownSubcommandBypass(input)).toBeNull()

@@ -8,27 +8,7 @@ import type { GitCommand } from './git-command.js'
 import { GIT_COMMANDS_WITH_NO_VERIFY } from './types.js'
 import { readCommitShortBundle } from './commit-short-bundle.js'
 import { dropRedirectTargets } from './drop-redirect-targets.js'
-
-/**
- * Options that consume the following argv token as their value (a commit
- * message, a message file, a template file, or a commit to reuse/re-edit). The
- * value of these options is user text and must never be scanned for hook-bypass
- * flags.
- */
-const VALUE_OPTIONS = new Set([
-  '-m',
-  '--message',
-  '-F',
-  '--file',
-  '-C',
-  '--reuse-message',
-  '-c',
-  '--reedit-message',
-  '-t',
-  '--template',
-  '--fixup',
-  '--squash',
-])
+import { subcommandValueOptions } from './subcommand-value-options.js'
 
 /**
  * Returns true when the token is the `git` program itself, tolerating a path
@@ -57,18 +37,20 @@ function isNoVerifyAbbreviation(token: string): boolean {
 
 /**
  * Scans one statement's argv tokens for a --no-verify bypass of `command`.
- * The value of message/file options (`-m`, `-F`, `-C`, …) is skipped, so a
+ * The value of each option in `valueOptions` (`-m`, `-F`, …) is skipped, so a
  * `--no-verify` or `-n` appearing inside a commit message body is not
  * mistaken for the flag. A flag in argv flag-position (including a quoted
  * `git commit "--no-verify"`, which git still parses as the flag) is still
  * detected.
  * @param statement - The statement's string argv tokens.
  * @param command - The detected git sub-command.
+ * @param valueOptions - The options whose next token is skipped as a value.
  * @returns True when the statement contains a flag that bypasses hooks.
  */
 function statementHasNoVerifyFlag(
   statement: string[],
-  command: GitCommand
+  command: GitCommand,
+  valueOptions: ReadonlySet<string>
 ): boolean {
   let skipNext = false
 
@@ -78,7 +60,7 @@ function statementHasNoVerifyFlag(
       continue
     }
 
-    if (VALUE_OPTIONS.has(token)) {
+    if (valueOptions.has(token)) {
       skipNext = true
       continue
     }
@@ -105,20 +87,45 @@ function statementHasNoVerifyFlag(
 }
 
 /**
- * Returns the guarded git sub-command a statement invokes, or null when the
- * statement does not invoke git or none of its words is a guarded
- * sub-command. When several guarded words appear, `commit` wins so that the
- * stricter `-n` rule applies — over-matching can only widen the scan.
+ * Returns true when any reading of the statement finds a bypass. Each
+ * sub-command in `commands` is read with its own value options, and again
+ * with the value options of `git commit`, which hold all of them. Git
+ * rejects an option that a sub-command does not have, but this check cannot
+ * know which reading git uses, so it blocks when either one finds the flag.
  * @param statement - The statement's string argv tokens.
- * @returns The statement's guarded sub-command, or null.
+ * @param commands - The sub-commands the statement may invoke.
+ * @returns True when a reading finds a flag that bypasses hooks.
  */
-function statementCommand(statement: string[]): GitCommand | null {
-  if (!statement.some(isGitToken)) return null
-  // `commit` is first in the list, so it wins when several words appear.
-  for (const cmd of GIT_COMMANDS_WITH_NO_VERIFY) {
-    if (statement.includes(cmd)) return cmd
-  }
-  return null
+function anyReadingHasNoVerifyFlag(
+  statement: string[],
+  commands: readonly GitCommand[]
+): boolean {
+  return commands.some(
+    command =>
+      statementHasNoVerifyFlag(
+        statement,
+        command,
+        subcommandValueOptions(command)
+      ) ||
+      statementHasNoVerifyFlag(
+        statement,
+        command,
+        subcommandValueOptions('commit')
+      )
+  )
+}
+
+/**
+ * Returns each guarded git sub-command word in a statement that invokes git,
+ * or an empty list when the statement does not invoke git. A word is not
+ * always the sub-command (`git rebase -m x commit`), so each one is read:
+ * over-matching can only widen the scan.
+ * @param statement - The statement's string argv tokens.
+ * @returns The statement's guarded sub-command words.
+ */
+function statementCommands(statement: string[]): GitCommand[] {
+  if (!statement.some(isGitToken)) return []
+  return GIT_COMMANDS_WITH_NO_VERIFY.filter(cmd => statement.includes(cmd))
 }
 
 /**
@@ -164,13 +171,13 @@ export function hasNoVerifyFlag(input: string, command: GitCommand): boolean {
   ]
   let anyGitStatement = false
   for (const statement of statements) {
-    const cmd = statementCommand(statement)
-    if (cmd === null) continue
+    const commands = statementCommands(statement)
+    if (commands.length === 0) continue
     anyGitStatement = true
-    if (statementHasNoVerifyFlag(statement, cmd)) return true
+    if (anyReadingHasNoVerifyFlag(statement, commands)) return true
   }
   if (anyGitStatement) return false
   return statements.some(statement =>
-    statementHasNoVerifyFlag(statement, command)
+    anyReadingHasNoVerifyFlag(statement, [command])
   )
 }
