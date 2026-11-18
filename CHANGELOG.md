@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.6
+
+### Patch Changes
+
+- ef32442: Stop blocking a long one-line commit message or PR body because it has many `git` words. Such a command is now checked with its quoted message text left out, so the rest of the command is still checked.
+- 2eb166f: Resolve escaped characters in simple variable values. A variable whose value has backslash escapes, or a bare value with characters such as `=`, is now expanded with the value the shell assigns, so a flag or `core.hooksPath` setting held in such a variable is detected. The command as written is still checked too, so nothing that was blocked before is allowed now.
+- 8a92cda: Scope value options to the subcommands that take them. The token after an option such as `-m`, `-c` or `--squash` is now skipped as a value only for a git subcommand where that option takes a value, so for example the token after `git rebase -m` (`--merge`) is checked. Nothing that was blocked before is allowed now.
+
 ## 1.4.5
 
 ### Patch Changes
