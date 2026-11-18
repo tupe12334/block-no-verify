@@ -2,6 +2,7 @@ import type { CheckResult } from './check-result.js'
 import { findMessageValueSpans } from './find-message-value-spans.js'
 import { hasHookSkipSignal } from './has-hook-skip-signal.js'
 import { hasNoVerifyFlag } from './has-no-verify-flag.js'
+import { hasSkipFlagWord } from './has-skip-flag-word.js'
 import { InputTooLongError } from './input-too-long-error.js'
 import { detectManagerBypass } from './managers/index.js'
 import { maskMessageValues } from './mask-message-values.js'
@@ -34,13 +35,16 @@ function maskValueText(text: string): string | null {
  * Returns true when the masked copy has a hook-skip flag or hook-manager
  * env var for any guarded git command. The values that were masked may have
  * been where the full check found the git command, so the flags are checked
- * for each command, not only the one the masked copy names.
+ * for each command, not only the one the masked copy names. Any word that
+ * is a hook-skip flag counts too (see {@link hasSkipFlagWord}), whatever
+ * option comes before it.
  * @param masked - The masked command text. Its escaped assignment values
  *   are also resolved (see `resolveAssignmentEscapes`) and checked.
  * @returns True when a bypass is found for any guarded command.
  */
 function hasBypassForAnyCommand(masked: string): boolean {
   return [masked, resolveAssignmentEscapes(masked)].some(text => {
+    if (hasSkipFlagWord(text)) return true
     const scanText = maskMessageValues(text)
     return GIT_COMMANDS_WITH_NO_VERIFY.some(
       command =>

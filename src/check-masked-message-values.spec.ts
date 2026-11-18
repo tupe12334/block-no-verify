@@ -122,6 +122,8 @@ describe('checkMaskedMessageValues', () => {
   it('returns null when the masked copy bypasses any guarded command', () => {
     const text = "gh x --message 'git \"commit\"' --no''-veri"
     expect(checkMaskedMessageValues(text, () => ALLOWED)).toBeNull()
+    const rebase = 'gh pr create --body "a"; git rebase -m "-n" main'
+    expect(checkMaskedMessageValues(rebase, () => ALLOWED)).toBeNull()
   })
 
   it('never runs for small commands, so their result matches main', () => {

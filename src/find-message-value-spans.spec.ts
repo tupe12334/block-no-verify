@@ -61,8 +61,25 @@ describe('findMessageValueSpans', () => {
     expect(values('git commit -m "a')).toEqual([])
   })
 
+  it('masks only options that take a message in that sub-command', () => {
+    expect(values('git rebase -m "-n" main')).toEqual([])
+    expect(values('git cherry-pick -m "1" abc')).toEqual([])
+    expect(values('git revert -m "1" HEAD')).toEqual([])
+    expect(values('git -C . commit -m "a"')).toEqual([])
+    expect(values('git stash -m "a"')).toEqual([])
+    expect(values('git merge --message "a"')).toEqual([])
+    expect(values('gh pr comment --title "a"')).toEqual([])
+    expect(values('gh x --message "a"')).toEqual([])
+    expect(values('git merge -m "a"')).toEqual(['a'])
+    expect(values('git notes add -m "a"')).toEqual(['a'])
+    expect(values('git stash push --message "a"')).toEqual(['a'])
+    expect(values('gh pr comment -b "a"')).toEqual(['a'])
+    expect(values('gh issue create -t "a" -b "b"')).toEqual(['a', 'b'])
+    expect(values('gh release create v1 --notes "a"')).toEqual(['a'])
+  })
+
   it('reads a glob as a word, not a statement end', () => {
-    expect(values('git add *.ts -m "a"')).toEqual(['a'])
+    expect(values('git commit *.ts -m "a"')).toEqual(['a'])
     expect(values('echo *.ts git commit -m "a"')).toEqual([])
   })
 

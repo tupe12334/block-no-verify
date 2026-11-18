@@ -1,7 +1,7 @@
 import { canMaskMessageValues } from './can-mask-message-values.js'
 import { ENV_ASSIGNMENT } from './env-assignment.js'
-import { MESSAGE_OPTIONS } from './message-options.js'
 import { readShellWord } from './read-shell-word.js'
+import { takesMessageValue } from './takes-message-value.js'
 
 /** Text that runs a command inside another: a substitution or `eval`. */
 const NESTED_COMMAND = /`|\$\(|<\(|>\(|\beval\b/
@@ -22,21 +22,22 @@ interface MessageValueSpan {
  * @param input - The command text.
  * @param start - Index of the word's first character.
  * @param word - The word.
- * @param previous - The word before it in the statement, if any.
+ * @param words - The raw words of the simple command before it.
  * @returns The span inside the quotes, or null.
  */
 function valueSpan(
   input: string,
   start: number,
   word: NonNullable<ReturnType<typeof readShellWord>>,
-  previous: string | undefined
+  words: readonly string[]
 ): MessageValueSpan | null {
   const isOneQuotedPart =
     word.quotes === 1 &&
     word.quoteStart === start &&
     word.quoteEnd === word.end - 1
   if (!isOneQuotedPart) return null
-  if (previous === undefined || !MESSAGE_OPTIONS.has(previous)) return null
+  const option = words.at(-1)
+  if (option === undefined || !takesMessageValue(words, option)) return null
   const span = { start: start + 1, end: word.end - 1 }
   // A `$` or backtick may expand, so such a value is not masked.
   const text = input.slice(span.start, span.end)
@@ -45,10 +46,12 @@ function valueSpan(
 }
 
 /**
- * Finds the quoted message values that are data: a commit or tag message,
- * or a PR, issue or release title or body, in a simple command whose program
- * word is literally `git` or `gh`. The shell never runs that text, so a
- * `git` word in it is prose, not a command.
+ * Finds the quoted message values that are data: the value of an option
+ * that takes a message in that `git` or `gh` sub-command (see
+ * `takesMessageValue`), such as `git commit -m` or `gh pr create --body`.
+ * The program word must be literally `git` or `gh`, with its sub-command
+ * words right after it. The shell never runs that text, so a `git` word in
+ * it is prose, not a command.
  *
  * The program word is the first word after a `;`, `&`, `|`, `(`, `)` or
  * `{`, after any `NAME=value` words. A redirect before it hides the
@@ -63,8 +66,8 @@ function valueSpan(
 export function findMessageValueSpans(input: string): MessageValueSpan[] {
   if (NESTED_COMMAND.test(input) || !canMaskMessageValues(input)) return []
   const spans: MessageValueSpan[] = []
-  let program: string | undefined
-  let previous: string | undefined
+  // The raw words of the current simple command, program first.
+  let words: string[] = []
   let i = 0
   while (i < input.length) {
     if (/\s/.test(input.charAt(i))) {
@@ -76,19 +79,13 @@ export function findMessageValueSpans(input: string): MessageValueSpan[] {
     const raw = input.slice(i, word.end)
     if (word.operator && /[<>]/.test(raw)) {
       // A redirect before the program word hides which program runs.
-      if (program === undefined) program = raw
-      previous = undefined
+      words.push(raw)
     } else if (word.operator || raw === '{') {
-      program = undefined
-      previous = undefined
-    } else {
-      if (program === undefined && !ENV_ASSIGNMENT.test(raw)) {
-        program = raw
-      } else if (program === 'git' || program === 'gh') {
-        const span = valueSpan(input, i, word, previous)
-        if (span !== null) spans.push(span)
-      }
-      previous = word.value
+      words = []
+    } else if (words.length > 0 || !ENV_ASSIGNMENT.test(raw)) {
+      const span = valueSpan(input, i, word, words)
+      if (span !== null) spans.push(span)
+      words.push(raw)
     }
     i = word.end
   }

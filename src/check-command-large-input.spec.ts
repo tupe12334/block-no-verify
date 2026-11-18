@@ -253,6 +253,33 @@ describe('checkCommand: large flat input', () => {
       expect(checkCommand(command).blocked).toBe(true)
     })
   })
+  describe('a -m value of a sub-command where -m takes no message', () => {
+    const padding = 'ran git here '.repeat(5042).slice(0, 65_536)
+    const pr = `gh pr create --title t --body "${padding}"`
+    const commands: [string, string][] = [
+      ['rebase -m "-n"', `${pr}; git rebase -m "-n" main`],
+      [
+        'rebase -m with the skip flag',
+        `${pr}; git rebase -m "${NO_VERIFY}" main`,
+      ],
+      ['cherry-pick -m "-n"', `${pr}; git cherry-pick -m "-n" abc`],
+      ['revert -m "-n"', `${pr}; git revert -m "-n" HEAD`],
+      ['stash -m "-n"', `${pr}; git stash -m "-n"`],
+      [
+        'cherry-pick -m with the skip flag',
+        `${pr}; git cherry-pick -m "${NO_VERIFY}" abc`,
+      ],
+      [
+        'revert -m with the skip flag',
+        `${pr}; git revert -m "${NO_VERIFY}" HEAD`,
+      ],
+      ['commit after a global option', `${pr}; git -C . commit -m "-n"`],
+      ['stash without push', `${pr}; git stash -m "${NO_VERIFY}"`],
+    ]
+    it.each(commands)('blocks %s', (_name, command) => {
+      expect(checkCommand(command).blocked).toBe(true)
+    })
+  })
 })
 
 describe('exported checks on input too large to check', () => {
