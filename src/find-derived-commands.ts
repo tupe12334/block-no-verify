@@ -7,11 +7,12 @@ import { findInterpreterStrings } from './find-interpreter-strings.js'
 import { findLiveSubstitutions } from './find-live-substitutions.js'
 import { preprocessCommand } from './preprocess-command.js'
 import { findShellScripts } from './find-shell-scripts.js'
+import { findSshCommands } from './find-ssh-commands.js'
 
 /**
  * Returns every command string the input would run indirectly, so the
  * caller can check each like a typed command (#101): shell `-c` operands,
- * `eval` and `env -S` strings, scripts fed to a shell on stdin, string
+ * `eval` and `env -S` strings, remote `ssh` commands, scripts fed to a shell on stdin, string
  * literals in interpreter code and awk programs, and decoded
  * `pwsh -EncodedCommand` values, and the body of each command substitution
  * that bash runs, such as one inside a double-quoted commit message.
@@ -21,6 +22,7 @@ import { findShellScripts } from './find-shell-scripts.js'
 export function findDerivedCommands(input: string): string[] {
   return [
     ...findShellScripts(input),
+    ...findSshCommands(input),
     ...findFedScripts(input),
     ...findInterpreterStrings(input),
     ...findHeredocInterpreterCode(input),
